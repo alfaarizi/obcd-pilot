@@ -1,0 +1,22 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+SHOW_PERSON_OUTLINE()
+LAYOUT_LEFT_RIGHT()
+
+title System Context Diagram for OBCD Pilot
+
+Person(user, "User", "Monitors a scene for object changes.")
+System(pilot, "OBCD Pilot", "Detects object changes in a video feed and alerts the user.")
+System_Ext(camera, "Webcam / Video File", "Provides the video feed.")
+System_Ext(smtp, "SMTP Server", "Delivers email alerts.")
+System_Ext(endpoint, "HTTP Endpoint", "Receives webhook alerts.")
+
+Rel(user, pilot, "Watches feed, configures alarms")
+Rel(camera, pilot, "Provides video frames")
+Rel(pilot, smtp, "Sends email")
+Rel(pilot, endpoint, "Posts webhook")
+
+SHOW_LEGEND()
+@enduml

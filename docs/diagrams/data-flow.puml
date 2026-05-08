@@ -1,0 +1,23 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Dynamic.puml
+
+LAYOUT_LEFT_RIGHT()
+
+title Data Flow for OBCD Pilot
+
+ContainerDb(cam, "Webcam / Video File", "")
+Container(capture, "capture", "OpenCV")
+Container(pipeline, "pipeline", "PyTorch")
+Container(alarm, "alarm", "Python")
+Container(ui, "ui", "PySide6")
+Container(svc, "Background Service", "FastAPI")
+
+Rel(cam, capture, "Raw frames", "numpy.ndarray")
+Rel(capture, pipeline, "Frame pairs", "numpy.ndarray")
+Rel(pipeline, alarm, "Detection result", "DetectionResult")
+Rel(alarm, ui, "Local alert", "AlarmEvent")
+Rel(alarm, svc, "Remote alert", "REST POST")
+
+SHOW_LEGEND()
+@enduml

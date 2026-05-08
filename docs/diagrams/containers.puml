@@ -1,0 +1,28 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+SHOW_PERSON_OUTLINE()
+LAYOUT_LEFT_RIGHT()
+
+title Container Diagram for OBCD Pilot
+
+Person(user, "User", "Monitors a scene for object changes.")
+
+System_Boundary(pilot, "OBCD Pilot") {
+    Container(app, "Desktop App", "Python, PySide6", "Captures video, runs detection, shows UI, fires local alarms.")
+    Container(svc, "Background Service", "Python, FastAPI", "Sends emails, posts webhooks, writes logs.")
+}
+
+System_Ext(cam, "Webcam / Video File", "Provides the video feed.")
+System_Ext(smtp, "SMTP Server", "Delivers email alerts.")
+System_Ext(endpoint, "HTTP Endpoint", "Receives webhook alerts.")
+
+Rel(user, app, "Uses")
+Rel(cam, app, "Provides video frames")
+Rel(app, svc, "Posts alarm events", "JSON/HTTP")
+Rel(svc, smtp, "Sends email", "SMTP")
+Rel(svc, endpoint, "Posts webhook", "HTTP")
+
+SHOW_LEGEND()
+@enduml

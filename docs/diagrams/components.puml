@@ -1,0 +1,30 @@
+@startuml
+!NEW_C4_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_LEFT_RIGHT()
+
+title Component Diagram for Desktop App
+
+System_Ext(cam, "Webcam / Video File", "Provides the video feed.")
+
+Container_Boundary(app, "Desktop App") {
+    Component(ui, "ui", "PySide6", "Renders the interface and user controls.")
+    Component(config, "config", "Python", "Loads and validates YAML settings.")
+    Component(capture, "capture", "OpenCV", "Acquires frames from webcam or video file.")
+    Component(pipeline, "pipeline", "PyTorch", "Runs YOLOv8, MobileNetV2, TransOBCD/ConvOBCD.")
+    Component(alarm, "alarm", "Python", "Dispatches alerts to configured channels.")
+}
+
+Container(svc, "Background Service", "Python, FastAPI")
+
+Rel(cam, capture, "Provides video frames")
+Rel(ui, config, "Reads/writes settings")
+Rel(ui, capture, "Starts/stops feed")
+Rel(capture, pipeline, "Sends frames")
+Rel(pipeline, alarm, "Sends DetectionResult")
+Rel_Back(ui, alarm, "Fires local alerts")
+Rel(alarm, svc, "Posts remote alerts", "JSON/HTTP")
+
+SHOW_LEGEND()
+@enduml
