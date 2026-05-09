@@ -15,7 +15,7 @@ Date: 2026-05-08
 | License compatibility | 0.20 | 9 (LGPL) | 10 (stdlib) | 4 (GPL) | 8 (MIT) |
 | Bundle size impact | 0.15 | 5 (~150 MB) | 9 (stdlib) | 5 (~150 MB) | 2 (~300 MB) |
 | Python integration and ecosystem | 0.20 | 9 | 7 | 9 | 3 |
-| **Weighted total** | | **8.20** | **7.45** | **7.40** | **6.15** |
+| **Weighted total** | | **8.40** | **7.80** | **7.40** | **6.55** |
 
 PySide6 wins on widget coverage, license safety, and Python ecosystem fit. Tkinter scores well on size but lacks the widgets the app needs. PyQt6 ties on features but carries GPL risk. Electron is too heavy.
 
@@ -30,7 +30,7 @@ PySide6 wins on widget coverage, license safety, and Python ecosystem fit. Tkint
 | Community and documentation maturity | 0.20 | 9 | 5 | 6 | 10 |
 | Compatibility with PyTorch and PySide6 | 0.15 | 7 | 5 | 6 | 10 |
 | Build time and complexity | 0.10 | 6 | 6 | 4 | 10 |
-| **Weighted total** | | **8.35** | **6.50** | **6.65** | **7.20** |
+| **Weighted total** | | **8.40** | **6.80** | **6.95** | **7.35** |
 
 PyInstaller leads because it produces a standalone binary on all three OSes and has the largest community for troubleshooting freeze issues. pip install scores high on compatibility but fails the "no developer tools" requirement, which carries the most weight.
 
@@ -45,7 +45,7 @@ PyInstaller leads because it produces a standalone binary on all three OSes and 
 | Network failure resilience | 0.20 | 9 | 4 | 8 |
 | Deployment complexity | 0.15 | 5 | 10 | 3 |
 | Reproducibility | 0.10 | 10 | 7 | 5 |
-| **Weighted total** | | **8.25** | **5.90** | **5.75** |
+| **Weighted total** | | **8.55** | **6.10** | **5.95** |
 
 Docker wins on isolation and resilience. The desktop app stays responsive even when the SMTP server is slow or the HTTP endpoint is down. In-process is simpler to deploy but ties the UI to network I/O. OS system services differ too much across platforms.
 
@@ -60,7 +60,7 @@ Docker wins on isolation and resilience. The desktop app stays responsive even w
 | Dependency overhead | 0.20 | 8 | 4 (protobuf) | 3 (broker) | 9 |
 | Debuggability (curl, browser, logs) | 0.15 | 10 | 4 | 5 | 4 |
 | Performance for one-to-one localhost | 0.10 | 8 | 10 | 7 | 9 |
-| **Weighted total** | | **9.15** | **6.30** | **5.75** | **5.75** |
+| **Weighted total** | | **9.15** | **6.65** | **6.05** | **5.95** |
 
 REST wins by a wide margin. For a one-to-one localhost link, the simplicity and debuggability of HTTP POST outweigh the performance advantage of gRPC or sockets. Unix sockets fail on Windows entirely.
 
@@ -75,7 +75,7 @@ REST wins by a wide margin. For a one-to-one localhost link, the simplicity and 
 | PyInstaller packaging compatibility | 0.20 | 9 | 5 | 9 |
 | IPC complexity | 0.15 | 9 (signals) | 4 (pipes/queues) | 7 |
 | PySide6 official pattern alignment | 0.10 | 10 | 3 | 5 |
-| **Weighted total** | | **9.10** | **6.75** | **5.70** |
+| **Weighted total** | | **9.10** | **7.10** | **5.85** |
 
 QThread wins because PyTorch and OpenCV release the GIL during their C++ computations, so a thread is enough to keep the UI responsive. multiprocessing scores well on GIL handling but adds IPC overhead and makes PyInstaller packaging harder. asyncio cannot offload CPU-bound inference.
 
@@ -90,7 +90,7 @@ QThread wins because PyTorch and OpenCV release the GIL during their C++ computa
 | UI round-trip (read, edit, write back) | 0.20 | 8 | 7 | 9 | 6 |
 | Nested structure support | 0.15 | 9 | 8 | 9 | 3 |
 | Schema validation tooling | 0.10 | 6 | 7 | 9 | 3 |
-| **Weighted total** | | **8.55** | **7.25** | **7.55** | **5.05** |
+| **Weighted total** | | **8.50** | **7.20** | **7.55** | **5.05** |
 
 YAML wins on readability and ecosystem fit. Users already know it from Docker Compose and ML config files. JSON scores close on structure and validation but is harder for humans to edit by hand. INI cannot express nested config.
 
