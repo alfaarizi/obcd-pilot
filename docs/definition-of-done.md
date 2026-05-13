@@ -10,3 +10,5 @@ Date: 2026-05-09
 6. Static analysis reports no new high or critical findings.
 7. For release sprints, verified on Windows, macOS, and Linux. For all other sprints, verified on at least one target platform.
 8. User-facing changes reflected in user documentation.
+9. Peak RSS stays below 2 GB over a 60-minute continuous run.
+10. Cold start to visible main window completes in 10 seconds or less (p95 over 10 launches).
