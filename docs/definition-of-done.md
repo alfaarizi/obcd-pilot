@@ -1,6 +1,6 @@
 # Definition of Done
 
-Date: 2026-05-09
+Date: 2026-05-13
 
 1. Code passes `ruff check` (88-char line length) and `mypy --strict` with zero errors.
 2. Unit tests pass with ≥ 90% branch coverage (`pytest --cov --cov-branch`).
