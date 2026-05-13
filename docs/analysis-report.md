@@ -94,6 +94,20 @@ QThread wins because PyTorch and OpenCV release the GIL during their C++ computa
 
 YAML wins on readability and ecosystem fit. Users already know it from Docker Compose and ML config files. JSON scores close on structure and validation but is harder for humans to edit by hand. INI cannot express nested config.
 
+### 1.7 ADR-007: Video Capture Library
+
+**Decision:** Use OpenCV (cv2.VideoCapture).
+
+| Criterion | Weight | OpenCV | QCamera | GStreamer | imageio |
+|---|---|---|---|---|---|
+| Webcam and video file support | 0.35 | 10 | 7 | 9 | 5 |
+| Cross-platform (Windows, macOS, Linux) | 0.30 | 9 | 8 | 7 | 8 |
+| PyInstaller bundle size impact | 0.20 | 6 (~60 MB) | 10 (bundled) | 3 (~200 MB) | 5 (~90 MB) |
+| GIL release during I/O | 0.15 | 9 | 7 | 8 | 4 |
+| **Weighted total** | | **8.75** | **7.90** | **7.05** | **5.75** |
+
+OpenCV wins on device support and cross-platform maturity. QCamera adds no extra bundle size but lacks video file playback through the same API. GStreamer matches on features but adds a large dependency that is hard to bundle with PyInstaller. imageio is lightweight on its own but needs imageio-ffmpeg for video support (it is also designed for file I/O, not real-time camera streaming).
+
 ## 2 Risk Register
 
 | ID | Risk | Probability | Impact | Mitigation | Status |
