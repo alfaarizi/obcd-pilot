@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obcd-pilot"
+version = "0.1.0"
+description = "Desktop application piloting the Object-Based Change Detection pipeline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "AGPL-3.0-only"}
+authors = [
+    {name = "Muhammad Al Farizi"},
+]
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "PySide6",
+    "PyYAML",
+    "torch",
+    "torchvision",
+    "ultralytics",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Repository = "https://github.com/alfaarizi/obcd-pilot"
+Issues = "https://github.com/alfaarizi/obcd-pilot/issues"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=obcd_pilot --cov-branch --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["obcd_pilot"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
