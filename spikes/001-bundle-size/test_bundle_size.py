@@ -69,7 +69,7 @@ def measure(dist_dir: Path) -> BundleResult:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SPIKE-001")
-    parser.add_argument("dist_dir", nargs="?", default="obcd/spike")
+    parser.add_argument("dist_dir", nargs="?", default="dist/obcd_spike")
     args = parser.parse_args()
 
     result = measure(Path(args.dist_dir))
