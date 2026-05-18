@@ -40,7 +40,6 @@ class StatusPanel(QWidget):
         root.addWidget(separators.create_h_separator())
 
         root.addWidget(self._create_detection_details())
-        root.addWidget(separators.create_h_separator())
 
         self.setLayout(root)
 
