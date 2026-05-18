@@ -34,6 +34,12 @@ dev = [
 Repository = "https://github.com/alfaarizi/obcd-pilot"
 Issues = "https://github.com/alfaarizi/obcd-pilot/issues"
 
+[project.scripts]
+obcd-pilot = "obcd_pilot.__main__:main"
+
+[tool.setuptools.package-data]
+"obcd_pilot.ui" = ["icons.qrc", "icons/*.svg", "styles/*.qss"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
@@ -44,6 +50,7 @@ select = ["E", "F", "I", "W"]
 [tool.mypy]
 strict = true
 python_version = "3.11"
+exclude = ["icons_rc\\.py$"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
