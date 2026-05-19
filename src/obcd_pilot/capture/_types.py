@@ -15,8 +15,8 @@ class Frame(NamedTuple):
     fps: float
 
 
-class VideoInfo(NamedTuple):
-    """Playback position emitted by ``VideoWorker``."""
+class Playback(NamedTuple):
+    """Playback emitted by ``VideoWorker``."""
 
     position_ms: float
     duration_ms: float

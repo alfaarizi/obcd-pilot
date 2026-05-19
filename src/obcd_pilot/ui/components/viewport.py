@@ -4,25 +4,43 @@ Displays camera frames.
 """
 
 import logging
+from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt
-from PySide6.QtGui import QAction, QActionGroup, QIcon, QImage, QPainter, QPaintEvent
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QIcon,
+    QImage,
+    QPainter,
+    QPaintEvent,
+)
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QHBoxLayout,
     QMenu,
     QSizePolicy,
+    QStackedLayout,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from obcd_pilot.capture import CameraInfo, CameraWorker, retrieve_cameras
+from obcd_pilot.capture import (
+    CameraInfo,
+    CameraWorker,
+    VideoWorker,
+    retrieve_cameras,
+)
 from obcd_pilot.ui import icons_rc  # noqa: F401
+from obcd_pilot.ui.components.playback_overlay import PlaybackOverlay
 
 _ICON_VIDEO_ON = QIcon(":/icons/video.svg")
 _ICON_VIDEO_OFF = QIcon(":/icons/video-off.svg")
 _ICON_UPLOAD = QIcon(":/icons/upload.svg")
+
+_VIDEO_FILTER = "Video Files (*.mp4)"
 
 logger = logging.getLogger(__name__)
 
@@ -33,42 +51,67 @@ class Viewport(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("viewport")
+        # Allow file drag-and-drop
+        self.setAcceptDrops(True)
 
         self._camera_worker: CameraWorker | None = None
         self._cameras: list[CameraInfo] = []
         self._current_camera: CameraInfo | None = None
 
+        self._video_worker: VideoWorker | None = None
+        self._resume_after_seek = False
+
         # Widgets
         self._canvas = _FrameCanvas()
+        self._playback_overlay = PlaybackOverlay()
+
         self._camera_menu = QMenu(self)
         self._camera_group = QActionGroup(self)
         self._camera_button = self._create_camera_button(self._camera_menu)
         self._open_file_button = self._create_open_file_button()
-        control_bar = self._create_control_bar(
+        preview_bar = self._create_preview_bar(
             self._camera_button, self._open_file_button
         )
 
         # Setup Widgets
+        self._playback_overlay.setVisible(False)
+
         self._camera_menu.setObjectName("camera-menu")
         self._camera_menu.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self._camera_group.setExclusive(True)
 
         # Layouts
+        canvas_stack = QWidget()
+        stack_layout = QStackedLayout()
+        stack_layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
+        stack_layout.addWidget(self._canvas)
+        stack_layout.addWidget(self._playback_overlay)
+        canvas_stack.setLayout(stack_layout)
+
         root = QVBoxLayout()
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        root.addWidget(self._canvas, stretch=1)
-        root.addWidget(control_bar)
+        root.addWidget(canvas_stack, stretch=1)
+        root.addWidget(preview_bar)
         self.setLayout(root)
 
         # Signals
         self._camera_menu.installEventFilter(self)
         self._camera_menu.triggered.connect(self._on_camera_selected)
         self._camera_button.clicked.connect(self._on_camera_clicked)
+        self._open_file_button.clicked.connect(self._on_open_file_clicked)
+        self._playback_overlay.sig_video_played.connect(self._on_video_played)
+        self._playback_overlay.sig_video_seek_started.connect(
+            self._on_video_seek_started
+        )
+        self._playback_overlay.sig_video_seek_moved.connect(self._on_video_seek_moved)
+        self._playback_overlay.sig_video_seek_ended.connect(self._on_video_seek_ended)
+        self._playback_overlay.sig_video_closed.connect(self._on_video_closed)
 
         app = QApplication.instance()
         assert app is not None
         app.aboutToQuit.connect(self._stop_camera)
+        app.aboutToQuit.connect(self._close_video)
 
         self._refresh_cameras()
 
@@ -115,6 +158,7 @@ class Viewport(QWidget):
     def _start_camera(self, camera: CameraInfo) -> None:
         """Start capturing from the given camera."""
         self._stop_camera()
+        self._close_video()
 
         worker = CameraWorker(camera.index)
         worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
@@ -133,6 +177,33 @@ class Viewport(QWidget):
         self._camera_worker.wait()
         self._camera_worker = None
         self._camera_button.setIcon(_ICON_VIDEO_OFF)
+
+    def _load_video(self, path: Path) -> None:
+        self._stop_camera()
+        self._close_video()
+
+        worker = VideoWorker(path)
+        worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
+        worker.sig_playback.connect(self._playback_overlay.update_position)
+        worker.sig_error_occurred.connect(self._on_video_error)
+        worker.sig_end_of_file.connect(self._on_video_ended)
+        worker.start()
+
+        self._video_worker = worker
+        self._video_worker.seek(0, resume=False)
+        self._playback_overlay.setVisible(True)
+        self._playback_overlay.set_playing(False)
+
+    def _close_video(self) -> None:
+        """Stop and discard the current video worker."""
+        if self._video_worker is None:
+            return
+
+        self._video_worker.stop()
+        self._video_worker.wait()
+        self._video_worker = None
+        self._playback_overlay.reset()
+        self._playback_overlay.setVisible(False)
 
     def _on_camera_selected(self, action: QAction) -> None:
         """Switch to the camera chosen from the dropdown."""
@@ -158,9 +229,60 @@ class Viewport(QWidget):
             self._start_camera(self._current_camera)
 
     def _on_camera_error(self, message: str) -> None:
-        """Handle a camera error by stopping and clearing."""
+        """Handle a camera error by stopping camera and clearing canvas."""
         logger.warning(message)
         self._stop_camera()
+        self._canvas.clear()
+
+    def _on_open_file_clicked(self) -> None:
+        """Open a file dialog and load the selected video."""
+        path_str, _ = QFileDialog.getOpenFileName(self, "Open Video", "", _VIDEO_FILTER)
+        if path_str:
+            self._load_video(Path(path_str))
+
+    def _on_video_played(self) -> None:
+        """Toggle video play/pause from the overlay button."""
+        if self._video_worker is None:
+            return
+
+        if self._video_worker.is_playing():
+            self._video_worker.pause()
+            self._playback_overlay.set_playing(False)
+        else:
+            self._video_worker.play()
+            self._playback_overlay.set_playing(True)
+
+    def _on_video_seek_started(self) -> None:
+        if self._video_worker is None:
+            return
+        self._resume_after_seek = self._video_worker.is_playing()
+        if self._resume_after_seek:
+            self._video_worker.pause()
+
+    def _on_video_seek_moved(self, frame_index: int) -> None:
+        """Seek the video to the requested frame."""
+        if self._video_worker is None:
+            return
+        self._video_worker.seek(frame_index, resume=False)
+
+    def _on_video_seek_ended(self, frame_index: int) -> None:
+        if self._video_worker is None:
+            return
+        self._video_worker.seek(frame_index, resume=self._resume_after_seek)
+
+    def _on_video_closed(self) -> None:
+        """Close the video and clear the canvas."""
+        self._close_video()
+        self._canvas.clear()
+
+    def _on_video_ended(self) -> None:
+        """Pause video at end-of-file."""
+        self._playback_overlay.set_playing(False)
+
+    def _on_video_error(self, message: str) -> None:
+        """Handle a video error by closing video and clearing canvas."""
+        logger.warning(message)
+        self._close_video()
         self._canvas.clear()
 
     @staticmethod
@@ -197,10 +319,10 @@ class Viewport(QWidget):
         return button
 
     @staticmethod
-    def _create_control_bar(*buttons: QWidget) -> QWidget:
+    def _create_preview_bar(*buttons: QWidget) -> QWidget:
         """Lay out buttons in a centered horizontal bar."""
         bar = QWidget()
-        bar.setObjectName("control-bar")
+        bar.setObjectName("preview-bar")
         bar.setFixedHeight(60)
 
         h_layout = QHBoxLayout()

@@ -19,6 +19,7 @@ _BACKENDS = {
 }
 
 _FPS_FALLBACK = 30.0
+_MAX_CONSECUTIVE_FAILURES = 5
 
 
 def retrieve_cameras() -> list[CameraInfo]:
@@ -57,12 +58,16 @@ class CameraWorker(QThread):
 
     def _read(self, capture: cv2.VideoCapture) -> None:
         """Read frames until stopped or the device fails."""
+        failures = 0
 
         while not self.isInterruptionRequested():
             ok, bgr = capture.read()
             if not ok:
-                self.sig_error_occurred.emit("Camera read failed.")
-                break
+                failures += 1
+                if failures >= _MAX_CONSECUTIVE_FAILURES:
+                    self.sig_error_occurred.emit("Camera read failed.")
+                    break
+                continue
 
             rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
             h, w, ch = rgb.shape
@@ -78,6 +83,3 @@ class CameraWorker(QThread):
 
             fps = capture.get(cv2.CAP_PROP_FPS) or _FPS_FALLBACK
             self.sig_frame.emit(Frame(image, w, h, fps))
-
-            frame_interval_ms = max(1, int(1000.0 / fps))
-            self.msleep(frame_interval_ms)

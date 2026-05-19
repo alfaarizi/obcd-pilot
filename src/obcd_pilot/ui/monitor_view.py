@@ -5,8 +5,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from obcd_pilot.ui.components.status_panel import StatusPanel
-from obcd_pilot.ui.components.viewport import Viewport
+from obcd_pilot.ui.components import StatusPanel, Viewport
 
 
 class MonitorView(QWidget):
