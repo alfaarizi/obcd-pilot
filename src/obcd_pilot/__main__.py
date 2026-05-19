@@ -15,7 +15,7 @@ if __name__ == "__main__":
     else:
         base = Path(__file__).resolve().parent
 
-    qss = base / "ui" / "styles" / "viewport.qss"
+    qss = base / "ui" / "styles" / "preview.qss"
     app.setStyleSheet(qss.read_text(encoding="utf-8"))
 
     window = MainWindow()

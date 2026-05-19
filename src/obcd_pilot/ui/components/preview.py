@@ -45,12 +45,12 @@ _VIDEO_FILTER = "Video Files (*.mp4)"
 logger = logging.getLogger(__name__)
 
 
-class Viewport(QWidget):
+class Preview(QWidget):
     """Camera feed canvas with Zoom-style control bar."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.setObjectName("viewport")
+        self.setObjectName("preview")
         # Allow file drag-and-drop
         self.setAcceptDrops(True)
 
