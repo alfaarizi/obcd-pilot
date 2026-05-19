@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from obcd_pilot.capture import Camera, CameraWorker, retrieve_cameras
+from obcd_pilot.capture import CameraInfo, CameraWorker, retrieve_cameras
 from obcd_pilot.ui import icons_rc  # noqa: F401
 
 _ICON_VIDEO_ON = QIcon(":/icons/video.svg")
@@ -35,8 +35,8 @@ class Viewport(QWidget):
         self.setObjectName("viewport")
 
         self._camera_worker: CameraWorker | None = None
-        self._cameras: list[Camera] = []
-        self._current_camera: Camera | None = None
+        self._cameras: list[CameraInfo] = []
+        self._current_camera: CameraInfo | None = None
 
         # Widgets
         self._canvas = _FrameCanvas()
@@ -72,7 +72,7 @@ class Viewport(QWidget):
 
         self._refresh_cameras()
 
-    def _set_cameras(self, cameras: list[Camera]) -> None:
+    def _set_cameras(self, cameras: list[CameraInfo]) -> None:
         """Replace camera dropdown entries."""
         self._cameras = cameras
         self._camera_menu.clear()
@@ -112,7 +112,7 @@ class Viewport(QWidget):
                     action.setChecked(True)
                     break
 
-    def _start_camera(self, camera: Camera) -> None:
+    def _start_camera(self, camera: CameraInfo) -> None:
         """Start capturing from the given camera."""
         self._stop_camera()
 

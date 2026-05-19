@@ -7,7 +7,7 @@ from cv2_enumerate_cameras import enumerate_cameras as enumerate_cameras
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QImage
 
-from obcd_pilot.capture._types import Camera, Frame
+from obcd_pilot.capture._types import CameraInfo, Frame
 
 _TARGET_WIDTH = 1280
 _TARGET_HEIGHT = 720
@@ -19,10 +19,10 @@ _BACKENDS = {
 }
 
 
-def retrieve_cameras() -> list[Camera]:
+def retrieve_cameras() -> list[CameraInfo]:
     """Enumerate available cameras with names and indices."""
     backend = _BACKENDS.get(platform.system(), cv2.CAP_ANY)
-    return [Camera(info.name, info.index) for info in enumerate_cameras(backend)]
+    return [CameraInfo(info.name, info.index) for info in enumerate_cameras(backend)]
 
 
 class CameraWorker(QThread):
@@ -31,17 +31,17 @@ class CameraWorker(QThread):
     sig_frame = Signal(Frame)
     sig_error_occurred = Signal(str)
 
-    def __init__(self, camera_idx: int = 0) -> None:
+    def __init__(self, camera_index: int = 0) -> None:
         super().__init__()
-        self._camera_idx = camera_idx
+        self._camera_index = camera_index
 
     def stop(self) -> None:
         self.requestInterruption()
 
     def run(self) -> None:
-        capture = cv2.VideoCapture(self._camera_idx)
+        capture = cv2.VideoCapture(self._camera_index)
         if not capture.isOpened():
-            error = f"Cannot open camera at index {self._camera_idx}."
+            error = f"Cannot open camera at index {self._camera_index}."
             self.sig_error_occurred.emit(error)
             return
 
