@@ -3,9 +3,12 @@
 Displays camera frames.
 """
 
+import logging
+
 from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt
-from PySide6.QtGui import QIcon, QImage, QPainter, QPaintEvent
+from PySide6.QtGui import QAction, QActionGroup, QIcon, QImage, QPainter, QPaintEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QMenu,
     QSizePolicy,
@@ -14,13 +17,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from obcd_pilot.capture import Camera, CameraWorker, retrieve_cameras
 from obcd_pilot.ui import icons_rc  # noqa: F401
 
-_DEFAULT_SOURCES: list[tuple[str, int]] = [
-    ("USB Camera (0)", 0),
-    ("USB Camera (1)", 1),
-    ("USB Camera (2)", 2),
-]
+_ICON_VIDEO_ON = QIcon(":/icons/video.svg")
+_ICON_VIDEO_OFF = QIcon(":/icons/video-off.svg")
+_ICON_UPLOAD = QIcon(":/icons/upload.svg")
+
+logger = logging.getLogger(__name__)
 
 
 class Viewport(QWidget):
@@ -30,19 +34,24 @@ class Viewport(QWidget):
         super().__init__()
         self.setObjectName("viewport")
 
+        self._camera_worker: CameraWorker | None = None
+        self._cameras: list[Camera] = []
+        self._current_camera: Camera | None = None
+
         # Widgets
         self._canvas = _FrameCanvas()
-
         self._camera_menu = QMenu(self)
-        self._camera_menu.setObjectName("camera-menu")
+        self._camera_group = QActionGroup(self)
         self._camera_button = self._create_camera_button(self._camera_menu)
-        self._camera_active = False
-
         self._open_file_button = self._create_open_file_button()
-
         control_bar = self._create_control_bar(
             self._camera_button, self._open_file_button
         )
+
+        # Setup Widgets
+        self._camera_menu.setObjectName("camera-menu")
+        self._camera_menu.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self._camera_group.setExclusive(True)
 
         # Layouts
         root = QVBoxLayout()
@@ -54,27 +63,84 @@ class Viewport(QWidget):
 
         # Signals
         self._camera_menu.installEventFilter(self)
+        self._camera_menu.triggered.connect(self._on_camera_selected)
+        self._camera_button.clicked.connect(self._on_camera_clicked)
 
-        self.set_camera_sources(_DEFAULT_SOURCES)
+        app = QApplication.instance()
+        assert app is not None
+        app.aboutToQuit.connect(self._stop_camera)
 
-    def set_image(self, image: QImage) -> None:
-        """Display a frame on the canvas."""
-        self._canvas.set(image)
+        cameras = retrieve_cameras()
+        self._set_cameras(cameras)
 
-    def clear_image(self) -> None:
-        """Clear the canvas to blank."""
-        self._canvas.clear()
-
-    def set_camera_sources(self, sources: list[tuple[str, int]]) -> None:
-        """Replace camera dropdown entries.
-
-        Args:
-            sources: Pairs of (display_name, device_index).
-        """
+    def _set_cameras(self, cameras: list[Camera]) -> None:
+        """Replace camera dropdown entries."""
+        self._cameras = cameras
         self._camera_menu.clear()
-        for name, index in sources:
-            action = self._camera_menu.addAction(name)
-            action.setData(index)
+
+        for action in self._camera_group.actions():
+            self._camera_group.removeAction(action)
+
+        for camera in cameras:
+            action = self._camera_menu.addAction(camera.name)
+            action.setData(camera.index)
+            action.setCheckable(True)
+            self._camera_group.addAction(action)
+
+        if cameras:
+            self._current_camera = cameras[0]
+            self._camera_group.actions()[0].setChecked(True)
+
+    def _start_camera(self, camera: Camera) -> None:
+        """Start capturing from the given camera."""
+        self._stop_camera()
+
+        worker = CameraWorker(camera.index)
+        worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
+        worker.sig_error_occurred.connect(self._on_camera_error)
+        worker.start()
+
+        self._camera_worker = worker
+        self._camera_button.setIcon(_ICON_VIDEO_ON)
+
+    def _stop_camera(self) -> None:
+        """Stop the current camera worker if running."""
+        if self._camera_worker is None:
+            return
+
+        self._camera_worker.stop()
+        self._camera_worker.wait()
+        self._camera_worker = None
+        self._camera_button.setIcon(_ICON_VIDEO_OFF)
+
+    def _on_camera_selected(self, action: QAction) -> None:
+        """Switch to the camera chosen from the dropdown."""
+        camera_idx = action.data()
+
+        camera = next((c for c in self._cameras if c.index == camera_idx), None)
+        if camera is None:
+            return
+
+        self._current_camera = camera
+
+        if self._camera_worker is not None:
+            self._start_camera(camera)
+
+    def _on_camera_clicked(self) -> None:
+        """Toggle the current camera on or off."""
+        if self._camera_worker is not None:
+            self._stop_camera()
+            self._canvas.clear()
+            return
+
+        if self._current_camera is not None:
+            self._start_camera(self._current_camera)
+
+    def _on_camera_error(self, message: str) -> None:
+        """Handle a camera error by stopping and clearing."""
+        logger.warning(message)
+        self._stop_camera()
+        self._canvas.clear()
 
     @staticmethod
     def _create_camera_button(menu: QMenu) -> QToolButton:
@@ -82,7 +148,7 @@ class Viewport(QWidget):
         button = QToolButton()
 
         button.setObjectName("camera-button")
-        button.setIcon(QIcon(":/icons/video.svg"))
+        button.setIcon(_ICON_VIDEO_OFF)
         button.setText("Video")
         button.setIconSize(QSize(24, 24))
         button.setFixedSize(64, 52)
@@ -100,7 +166,7 @@ class Viewport(QWidget):
         button = QToolButton()
 
         button.setObjectName("open-file-button")
-        button.setIcon(QIcon(":/icons/upload.svg"))
+        button.setIcon(QIcon(_ICON_UPLOAD))
         button.setText("Upload")
         button.setIconSize(QSize(24, 24))
         button.setFixedSize(64, 52)

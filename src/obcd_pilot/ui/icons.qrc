@@ -3,5 +3,6 @@
         <file>icons/upload.svg</file>
         <file>icons/video-off.svg</file>
         <file>icons/video.svg</file>
+        <file>icons/check.svg</file>
     </qresource>
 </RCC>

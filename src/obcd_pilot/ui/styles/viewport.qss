@@ -58,3 +58,16 @@ QMenu#camera-menu::item:selected {
     background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
 }
+
+QMenu#camera-menu::indicator {
+    width: 14px;
+    height: 14px;
+}
+
+QMenu#camera-menu::indicator:checked {
+    image: url(:/icons/check.svg);
+}
+
+QMenu#camera-menu::indicator:unchecked {
+    image: none;
+}
