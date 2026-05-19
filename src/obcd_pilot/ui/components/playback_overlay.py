@@ -46,8 +46,8 @@ class PlaybackOverlay(QWidget):
         self._close_button = QToolButton()
         self._close_button.setObjectName("close-video-button")
         self._close_button.setIcon(_ICON_CLOSE)
-        self._close_button.setIconSize(QSize(14, 14))
-        self._close_button.setFixedSize(28, 28)
+        self._close_button.setIconSize(QSize(18, 18))
+        self._close_button.setFixedSize(32, 32)
         self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
 
         header_bar = QHBoxLayout()
