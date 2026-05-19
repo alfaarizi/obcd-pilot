@@ -70,8 +70,7 @@ class Viewport(QWidget):
         assert app is not None
         app.aboutToQuit.connect(self._stop_camera)
 
-        cameras = retrieve_cameras()
-        self._set_cameras(cameras)
+        self._refresh_cameras()
 
     def _set_cameras(self, cameras: list[Camera]) -> None:
         """Replace camera dropdown entries."""
@@ -90,6 +89,28 @@ class Viewport(QWidget):
         if cameras:
             self._current_camera = cameras[0]
             self._camera_group.actions()[0].setChecked(True)
+
+    def _refresh_cameras(self) -> None:
+        """Re-detect cameras, preserving the current selection."""
+        cameras = retrieve_cameras()
+        if cameras == self._cameras:
+            return
+
+        self._set_cameras(cameras)
+
+        # restore selected camera
+        selected_camera_idx = None
+        if self._current_camera:
+            selected_camera_idx = self._current_camera.index
+
+        if selected_camera_idx is not None:
+            for action in self._camera_group.actions():
+                if action.data() == selected_camera_idx:
+                    self._current_camera = next(
+                        c for c in cameras if c.index == selected_camera_idx
+                    )
+                    action.setChecked(True)
+                    break
 
     def _start_camera(self, camera: Camera) -> None:
         """Start capturing from the given camera."""
@@ -198,6 +219,9 @@ class Viewport(QWidget):
         Reposition the camera menu above the button on show.
         """
         if watched is self._camera_menu and event.type() == QEvent.Type.Show:
+            self._refresh_cameras()
+            self._camera_menu.adjustSize()
+
             menu_size = self._camera_menu.sizeHint()
             x = self._camera_button.width() - 12
             y = -menu_size.height()
