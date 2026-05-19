@@ -15,6 +15,15 @@ class Frame(NamedTuple):
     fps: float
 
 
+class VideoInfo(NamedTuple):
+    """Playback position emitted by ``VideoWorker``."""
+
+    position_ms: float
+    duration_ms: float
+    frame_index: int
+    frame_count: int
+
+
 @dataclass(frozen=True, slots=True)
 class CameraInfo:
     """An available camera device.

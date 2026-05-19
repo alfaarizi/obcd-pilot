@@ -18,6 +18,8 @@ _BACKENDS = {
     "Windows": cv2.CAP_MSMF,
 }
 
+_FPS_FALLBACK = 30.0
+
 
 def retrieve_cameras() -> list[CameraInfo]:
     """Enumerate available cameras with names and indices."""
@@ -74,7 +76,7 @@ class CameraWorker(QThread):
                 QImage.Format.Format_RGB888,
             ).copy()
 
-            fps = capture.get(cv2.CAP_PROP_FPS)
+            fps = capture.get(cv2.CAP_PROP_FPS) or _FPS_FALLBACK
             self.sig_frame.emit(Frame(image, w, h, fps))
 
             frame_interval_ms = max(1, int(1000.0 / fps))
