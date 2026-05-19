@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from obcd_pilot.capture import Playback
+from obcd_pilot.ui import icons_rc  # noqa: F401
 
 _ICON_PLAY = QIcon(":/icons/play.svg")
 _ICON_PAUSE = QIcon(":/icons/pause.svg")
