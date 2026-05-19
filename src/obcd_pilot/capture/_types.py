@@ -16,7 +16,7 @@ class Frame(NamedTuple):
 
 
 @dataclass(frozen=True, slots=True)
-class Camera:
+class CameraInfo:
     """An available camera device.
 
     Attributes:
