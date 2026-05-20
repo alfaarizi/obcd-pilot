@@ -29,6 +29,7 @@ dev = [
     "mypy",
     "pytest",
     "pytest-cov",
+    "pytest-qt",
 ]
 
 [project.urls]
@@ -59,6 +60,7 @@ addopts = "--cov=obcd_pilot --cov-branch --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["obcd_pilot"]
+omit = ["*/obcd_pilot/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 90
