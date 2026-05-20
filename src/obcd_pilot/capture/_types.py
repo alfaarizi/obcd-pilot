@@ -1,4 +1,4 @@
-"""Data types for the Capture module"""
+"""Data types for the capture module."""
 
 from dataclasses import dataclass
 from typing import NamedTuple

@@ -1,7 +1,4 @@
-"""Main Window for Qt Application.
-
-Displays a live webcam feed.
-"""
+"""Main application window with navigation sidebar and view stack."""
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QAction, QActionGroup, QIcon

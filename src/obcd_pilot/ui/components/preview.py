@@ -179,6 +179,7 @@ class Preview(QWidget):
         self._camera_button.setIcon(_ICON_VIDEO_OFF)
 
     def _load_video(self, path: Path) -> None:
+        """Stop any active camera, then start a VideoWorker for path."""
         self._stop_camera()
         self._close_video()
 
@@ -253,6 +254,7 @@ class Preview(QWidget):
             self._playback_overlay.set_playing(True)
 
     def _on_video_seek_started(self) -> None:
+        """Pause the video worker when the user begins scrubbing the slider."""
         if self._video_worker is None:
             return
         self._resume_after_seek = self._video_worker.is_playing()
@@ -266,6 +268,7 @@ class Preview(QWidget):
         self._video_worker.seek(frame_index, resume=False)
 
     def _on_video_seek_ended(self, frame_index: int) -> None:
+        """Seek to the final slider position and restore play state."""
         if self._video_worker is None:
             return
         self._video_worker.seek(frame_index, resume=self._resume_after_seek)

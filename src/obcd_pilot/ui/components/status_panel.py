@@ -23,6 +23,7 @@ _ALARM_CHANNELS: list[str] = [
 
 
 def _create_section_header(text: str) -> QLabel:
+    """Return an uppercase, semi-bold section header label."""
     label = QLabel(text.upper())
     label.setObjectName("section-header")
     font = label.font()

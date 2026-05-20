@@ -39,9 +39,11 @@ class CameraWorker(QThread):
         self._camera_index = camera_index
 
     def stop(self) -> None:
+        """Request the worker to stop reading frames."""
         self.requestInterruption()
 
     def run(self) -> None:
+        """Open the camera device and read frames until stopped."""
         capture = cv2.VideoCapture(self._camera_index)
         if not capture.isOpened():
             error = f"Cannot open camera at index {self._camera_index}."

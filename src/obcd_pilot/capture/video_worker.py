@@ -1,3 +1,5 @@
+"""Video playback worker running on a dedicated QThread."""
+
 import time
 from pathlib import Path
 from threading import Event
