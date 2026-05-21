@@ -212,6 +212,23 @@ QMenu#camera-menu::indicator:unchecked {
     image: none;
 }
 
+/* Canvas Message */
+
+QWidget#canvas-message {
+    background: #222222;
+}
+
+QLabel#canvas-message-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(245, 245, 245, 0.55);
+}
+
+QLabel#canvas-message-subtitle {
+    font-size: 11px;
+    color: rgba(245, 245, 245, 0.35);
+}
+
 /* Playback Overlay */
 
 QWidget#playback-overlay {

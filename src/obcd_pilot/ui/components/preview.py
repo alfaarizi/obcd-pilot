@@ -18,7 +18,9 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
+    QLabel,
     QMenu,
     QSizePolicy,
     QStackedLayout,
@@ -39,6 +41,8 @@ from obcd_pilot.ui.components.playback_overlay import PlaybackOverlay
 _ICON_VIDEO_ON = QIcon(":/icons/video.svg")
 _ICON_VIDEO_OFF = QIcon(":/icons/video-off.svg")
 _ICON_UPLOAD = QIcon(":/icons/upload.svg")
+_ICON_CAMERA_OFF = QIcon(":/icons/camera-off.svg")
+_ICON_FILE_X = QIcon(":/icons/file-x.svg")
 
 _VIDEO_FILTER = "Video Files (*.mp4)"
 
@@ -51,8 +55,6 @@ class Preview(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("preview")
-        # Allow file drag-and-drop
-        self.setAcceptDrops(True)
 
         self._camera_worker: CameraWorker | None = None
         self._cameras: list[CameraInfo] = []
@@ -62,7 +64,8 @@ class Preview(QWidget):
         self._resume_after_seek = False
 
         # Widgets
-        self._canvas = _FrameCanvas()
+        self._canvas = _Canvas()
+        self._canvas_message = _CanvasMessage()
         self._playback_overlay = PlaybackOverlay()
 
         self._camera_menu = QMenu(self)
@@ -85,6 +88,7 @@ class Preview(QWidget):
         stack_layout = QStackedLayout()
         stack_layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
         stack_layout.addWidget(self._canvas)
+        stack_layout.addWidget(self._canvas_message)
         stack_layout.addWidget(self._playback_overlay)
         canvas_stack.setLayout(stack_layout)
 
@@ -132,19 +136,27 @@ class Preview(QWidget):
         if cameras:
             self._current_camera = cameras[0]
             self._camera_group.actions()[0].setChecked(True)
+            self._canvas_message.hide_message()
+        else:
+            self._current_camera = None
+            self._canvas_message.show_message(
+                _ICON_CAMERA_OFF,
+                "No camera found",
+                "Connect a camera and try again",
+            )
 
     def _refresh_cameras(self) -> None:
         """Re-detect cameras, preserving the current selection."""
         cameras = retrieve_cameras()
-        if cameras == self._cameras:
+        if cameras and cameras == self._cameras:
             return
-
-        self._set_cameras(cameras)
 
         # restore selected camera
         selected_camera_idx = None
         if self._current_camera:
             selected_camera_idx = self._current_camera.index
+
+        self._set_cameras(cameras)
 
         if selected_camera_idx is not None:
             for action in self._camera_group.actions():
@@ -159,6 +171,7 @@ class Preview(QWidget):
         """Start capturing from the given camera."""
         self._stop_camera()
         self._close_video()
+        self._canvas_message.hide_message()
 
         worker = CameraWorker(camera.index)
         worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
@@ -182,6 +195,7 @@ class Preview(QWidget):
         """Stop any active camera, then start a VideoWorker for path."""
         self._stop_camera()
         self._close_video()
+        self._canvas_message.hide_message()
 
         worker = VideoWorker(path)
         worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
@@ -224,16 +238,18 @@ class Preview(QWidget):
         if self._camera_worker is not None:
             self._stop_camera()
             self._canvas.clear()
+            self._canvas_message.hide_message()
             return
 
         if self._current_camera is not None:
             self._start_camera(self._current_camera)
 
     def _on_camera_error(self, message: str) -> None:
-        """Handle a camera error by stopping camera and clearing canvas."""
+        """Handle a camera error by stopping camera and showing an error message."""
         logger.warning(message)
         self._stop_camera()
         self._canvas.clear()
+        self._canvas_message.show_message(_ICON_CAMERA_OFF, "Camera error", message)
 
     def _on_open_file_clicked(self) -> None:
         """Open a file dialog and load the selected video."""
@@ -277,16 +293,23 @@ class Preview(QWidget):
         """Close the video and clear the canvas."""
         self._close_video()
         self._canvas.clear()
+        if not self._cameras:
+            self._canvas_message.show_message(
+                _ICON_CAMERA_OFF,
+                "No camera found",
+                "Connect a camera and try again",
+            )
 
     def _on_video_ended(self) -> None:
         """Pause video at end-of-file."""
         self._playback_overlay.set_playing(False)
 
     def _on_video_error(self, message: str) -> None:
-        """Handle a video error by closing video and clearing canvas."""
+        """Handle a video error by closing video and showing an error message."""
         logger.warning(message)
         self._close_video()
         self._canvas.clear()
+        self._canvas_message.show_message(_ICON_FILE_X, "Video error", message)
 
     @staticmethod
     def _create_camera_button(menu: QMenu) -> QToolButton:
@@ -355,7 +378,55 @@ class Preview(QWidget):
         return super().eventFilter(watched, event)
 
 
-class _FrameCanvas(QWidget):
+class _CanvasMessage(QWidget):
+    """Full-canvas overlay for broadcasting status or error messages."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setObjectName("canvas-message")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        self._icon_label = QLabel()
+        self._icon_label.setObjectName("canvas-message-icon")
+        self._icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        fade = QGraphicsOpacityEffect()
+        fade.setOpacity(0.22)
+        self._icon_label.setGraphicsEffect(fade)
+
+        self._title_label = QLabel()
+        self._title_label.setObjectName("canvas-message-title")
+        self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self._subtitle_label = QLabel()
+        self._subtitle_label.setObjectName("canvas-message-subtitle")
+        self._subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        root = QVBoxLayout()
+        root.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        root.setSpacing(0)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.addWidget(self._icon_label)
+        root.addSpacing(12)
+        root.addWidget(self._title_label)
+        root.addSpacing(4)
+        root.addWidget(self._subtitle_label)
+        self.setLayout(root)
+
+        self.setVisible(False)
+
+    def show_message(self, icon: QIcon, title: str, subtitle: str) -> None:
+        """Display an icon, title, and subtitle over the canvas."""
+        self._icon_label.setPixmap(icon.pixmap(QSize(40, 40)))
+        self._title_label.setText(title)
+        self._subtitle_label.setText(subtitle)
+        self.setVisible(True)
+
+    def hide_message(self) -> None:
+        """Dismiss the overlay."""
+        self.setVisible(False)
+
+
+class _Canvas(QWidget):
     """Paint a QImage with aspect-ratio preservation."""
 
     def __init__(self) -> None:
