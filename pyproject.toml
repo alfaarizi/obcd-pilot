@@ -40,11 +40,11 @@ Issues = "https://github.com/alfaarizi/obcd-pilot/issues"
 obcd-pilot = "obcd_pilot.__main__:main"
 
 [tool.setuptools.package-data]
-"obcd_pilot.ui" = ["icons.qrc", "icons/*.svg", "styles/*.qss"]
+"obcd_pilot.ui" = ["styles/*.qss"]
 
 [tool.ruff]
-line-length = 88
 target-version = "py311"
+exclude = ["**/icons_rc.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

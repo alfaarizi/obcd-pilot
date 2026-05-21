@@ -1,5 +1,6 @@
 """Camera capture worker running on a dedicated QThread."""
 
+import logging
 import platform
 
 import cv2
@@ -9,8 +10,8 @@ from PySide6.QtGui import QImage
 
 from obcd_pilot.capture._types import CameraInfo, Frame
 
-_TARGET_WIDTH = 1280
-_TARGET_HEIGHT = 720
+_REQUESTED_WIDTH = 1280
+_REQUESTED_HEIGHT = 720
 
 _BACKENDS = {
     "Darwin": cv2.CAP_AVFOUNDATION,
@@ -20,6 +21,8 @@ _BACKENDS = {
 
 _FPS_FALLBACK = 30.0
 _MAX_CONSECUTIVE_FAILURES = 5
+
+logger = logging.getLogger(__name__)
 
 
 def retrieve_cameras() -> list[CameraInfo]:
@@ -50,8 +53,19 @@ class CameraWorker(QThread):
             self.sig_error_occurred.emit(error)
             return
 
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, _TARGET_WIDTH)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, _TARGET_HEIGHT)
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, _REQUESTED_WIDTH)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, _REQUESTED_HEIGHT)
+
+        capture_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+        capture_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        if capture_width != _REQUESTED_WIDTH or capture_height != _REQUESTED_HEIGHT:
+            logger.warning(
+                "Requested %dx%d but camera negotiated %dx%d.",
+                _REQUESTED_WIDTH,
+                _REQUESTED_HEIGHT,
+                capture_width,
+                capture_height,
+            )
 
         try:
             self._read(capture)

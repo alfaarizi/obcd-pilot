@@ -4,9 +4,6 @@ __pycache__/
 *.egg-info/
 *.egg
 
-# Generated
-icons_rc.py
-
 # Build or distribution
 build/
 dist/

@@ -134,11 +134,13 @@ class VideoWorker(QThread):
             ).copy()
 
             self.sig_frame.emit(Frame(image, w, h, fps))
+            # POS_FRAMES is the next-to-read index, step back for the decoded frame.
+            frame_index = max(0, int(capture.get(cv2.CAP_PROP_POS_FRAMES)) - 1)
             self.sig_playback.emit(
                 Playback(
-                    capture.get(cv2.CAP_PROP_POS_MSEC),
+                    frame_index / fps * 1000.0,
                     duration_ms,
-                    int(capture.get(cv2.CAP_PROP_POS_FRAMES)),
+                    frame_index,
                     frame_count,
                 )
             )
