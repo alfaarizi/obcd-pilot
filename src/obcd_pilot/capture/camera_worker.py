@@ -85,6 +85,7 @@ class CameraWorker(QThread):
                     break
                 continue
 
+            failures = 0
             rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
             h, w, ch = rgb.shape
             bytes_per_line = ch * w

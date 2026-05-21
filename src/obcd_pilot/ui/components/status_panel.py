@@ -128,7 +128,7 @@ class StatusPanel(QWidget):
         return alarm_status
 
     def _create_detection_details(self) -> QWidget:
-        """Create the detection pipeline informations."""
+        """Create the detection pipeline information."""
         detection_details = QWidget()
 
         v_layout = QVBoxLayout()

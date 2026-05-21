@@ -87,11 +87,10 @@ class VideoWorker(QThread):
         duration_ms = frame_count / fps * 1000.0
 
         while not self.isInterruptionRequested():
-            is_paused = not self.is_playing()
-            self._playing_event.wait()
-            if self.isInterruptionRequested():
-                break
-            if is_paused:
+            if not self.is_playing():
+                self._playing_event.wait()
+                if self.isInterruptionRequested():
+                    break
                 frame_timer_s = time.monotonic()
 
             seek_index = self._seek_index
