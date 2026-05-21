@@ -69,11 +69,13 @@ class VideoWorker(QThread):
     def run(self) -> None:
         """Open the file and read frames until stopped or EOF."""
         capture = cv2.VideoCapture(str(self._path))
-        if not capture.isOpened():
-            self.sig_error_occurred.emit(f"Cannot open video file: {self._path.name}")
-            return
-
         try:
+            if not capture.isOpened():
+                self.sig_error_occurred.emit(
+                    f"Cannot open video file: {self._path.name}"
+                )
+                return
+
             self._read(capture)
         finally:
             capture.release()

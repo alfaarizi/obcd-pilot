@@ -48,26 +48,27 @@ class CameraWorker(QThread):
     def run(self) -> None:
         """Open the camera device and read frames until stopped."""
         capture = cv2.VideoCapture(self._camera_index)
-        if not capture.isOpened():
-            error = f"Cannot open camera at index {self._camera_index}."
-            self.sig_error_occurred.emit(error)
-            return
-
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, _REQUESTED_WIDTH)
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, _REQUESTED_HEIGHT)
-
-        capture_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        capture_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        if capture_width != _REQUESTED_WIDTH or capture_height != _REQUESTED_HEIGHT:
-            logger.warning(
-                "Requested %dx%d but camera negotiated %dx%d.",
-                _REQUESTED_WIDTH,
-                _REQUESTED_HEIGHT,
-                capture_width,
-                capture_height,
-            )
-
         try:
+            if not capture.isOpened():
+                self.sig_error_occurred.emit(
+                    f"Cannot open camera at index {self._camera_index}."
+                )
+                return
+
+            capture.set(cv2.CAP_PROP_FRAME_WIDTH, _REQUESTED_WIDTH)
+            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, _REQUESTED_HEIGHT)
+
+            capture_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+            capture_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            if capture_width != _REQUESTED_WIDTH or capture_height != _REQUESTED_HEIGHT:
+                logger.warning(
+                    "Requested %dx%d but camera negotiated %dx%d.",
+                    _REQUESTED_WIDTH,
+                    _REQUESTED_HEIGHT,
+                    capture_width,
+                    capture_height,
+                )
+
             self._read(capture)
         finally:
             capture.release()

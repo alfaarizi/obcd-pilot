@@ -113,7 +113,8 @@ class Preview(QWidget):
         self._playback_overlay.sig_video_closed.connect(self._on_video_closed)
 
         app = QApplication.instance()
-        assert app is not None
+        if app is None:
+            raise RuntimeError("Preview requires a running QApplication.")
         app.aboutToQuit.connect(self._stop_camera)
         app.aboutToQuit.connect(self._close_video)
 
