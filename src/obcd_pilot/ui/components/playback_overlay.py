@@ -42,20 +42,6 @@ class PlaybackOverlay(QWidget):
         self._is_playing = True
         self._is_seeking = False
 
-        # Top Overlay
-        self._close_button = QToolButton()
-        self._close_button.setObjectName("close-video-button")
-        self._close_button.setIcon(_ICON_CLOSE)
-        self._close_button.setIconSize(QSize(18, 18))
-        self._close_button.setFixedSize(32, 32)
-        self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        header_bar = QHBoxLayout()
-        header_bar.setContentsMargins(0, 6, 6, 0)
-        header_bar.addStretch(1)
-        header_bar.addWidget(self._close_button)
-
-        # Bottom Overlay
         self._play_button = QToolButton()
         self._play_button.setObjectName("play-video-button")
         self._play_button.setIcon(_ICON_PAUSE)
@@ -67,16 +53,24 @@ class PlaybackOverlay(QWidget):
         self._playback_slider.setObjectName("playback-slider")
         self._playback_slider.setRange(0, 0)
 
-        self._time_label = QLabel("00:00 / 00: 00")
+        self._time_label = QLabel("00:00 / 00:00")
         self._time_label.setObjectName("playback-time-label")
         self._time_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self._time_label.setFixedWidth(100)
+
+        self._close_button = QToolButton()
+        self._close_button.setObjectName("close-video-button")
+        self._close_button.setIcon(_ICON_CLOSE)
+        self._close_button.setIconSize(QSize(18, 18))
+        self._close_button.setFixedSize(32, 32)
+        self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
 
         playback_layout = QHBoxLayout()
         playback_layout.setContentsMargins(10, 0, 10, 8)
         playback_layout.addWidget(self._play_button, 0, Qt.AlignmentFlag.AlignVCenter)
         playback_layout.addWidget(self._playback_slider, stretch=1)
         playback_layout.addWidget(self._time_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        playback_layout.addWidget(self._close_button, 0, Qt.AlignmentFlag.AlignVCenter)
 
         playback_bar = QWidget()
         playback_bar.setObjectName("playback-bar")
@@ -87,7 +81,6 @@ class PlaybackOverlay(QWidget):
         root = QVBoxLayout()
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-        root.addLayout(header_bar)
         root.addStretch(1)
         root.addWidget(playback_bar)
 
