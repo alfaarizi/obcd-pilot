@@ -39,9 +39,7 @@ class TestCameraWorkerConstruction:
 class TestCameraWorkerStop:
     """Tests for CameraWorker.stop."""
 
-    def test_stop_calls_request_interruption(
-        self, camera_worker: CameraWorker
-    ) -> None:
+    def test_stop_calls_request_interruption(self, camera_worker: CameraWorker) -> None:
         """stop() delegates to QThread.requestInterruption."""
         with patch.object(camera_worker, "requestInterruption") as mock_ri:
             camera_worker.stop()
@@ -82,9 +80,7 @@ class TestCameraWorkerRun:
 
         mock_capture.release.assert_called_once()
 
-    def test_run_sets_resolution_properties(
-        self, camera_worker: CameraWorker
-    ) -> None:
+    def test_run_sets_resolution_properties(self, camera_worker: CameraWorker) -> None:
         """run() configures WIDTH and HEIGHT capture properties before reading."""
         import cv2 as _cv2
 
@@ -123,17 +119,13 @@ class TestCameraWorkerRead:
         mock_capture.read.return_value = (False, None)
         mock_capture.get.return_value = 30.0
 
-        with patch.object(
-            camera_worker, "isInterruptionRequested", return_value=False
-        ):
+        with patch.object(camera_worker, "isInterruptionRequested", return_value=False):
             camera_worker._read(mock_capture)
 
         assert errors == ["Camera read failed."]
         assert mock_capture.read.call_count == _MAX_CONSECUTIVE_FAILURES
 
-    def test_emits_frame_on_successful_read(
-        self, camera_worker: CameraWorker
-    ) -> None:
+    def test_emits_frame_on_successful_read(self, camera_worker: CameraWorker) -> None:
         """_read emits sig_frame once for each successful capture.read() call."""
         from obcd_pilot.capture._types import Frame
 
@@ -192,9 +184,7 @@ class TestCameraWorkerRead:
         mock_capture = MagicMock()
         mock_capture.get.return_value = 30.0
 
-        with patch.object(
-            camera_worker, "isInterruptionRequested", return_value=True
-        ):
+        with patch.object(camera_worker, "isInterruptionRequested", return_value=True):
             camera_worker._read(mock_capture)
 
         mock_capture.read.assert_not_called()

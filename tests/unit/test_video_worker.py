@@ -130,9 +130,7 @@ class TestVideoWorkerSeek:
 class TestVideoWorkerStop:
     """Tests for the stop() method."""
 
-    def test_stop_calls_request_interruption(
-        self, video_worker: VideoWorker
-    ) -> None:
+    def test_stop_calls_request_interruption(self, video_worker: VideoWorker) -> None:
         """stop() delegates to QThread.requestInterruption."""
         with patch.object(video_worker, "requestInterruption") as mock_ri:
             video_worker.stop()
@@ -203,9 +201,7 @@ class TestVideoWorkerRead:
             mock.read.side_effect = reads
         return mock
 
-    def test_emits_frame_for_each_valid_read(
-        self, video_worker: VideoWorker
-    ) -> None:
+    def test_emits_frame_for_each_valid_read(self, video_worker: VideoWorker) -> None:
         """_read emits sig_frame once per successfully decoded frame."""
         frames: list[Frame] = []
         video_worker.sig_frame.connect(frames.append)
@@ -228,9 +224,7 @@ class TestVideoWorkerRead:
         assert len(frames) == 1
         assert frames[0].fps == 30.0
 
-    def test_emits_playback_signal_per_frame(
-        self, video_worker: VideoWorker
-    ) -> None:
+    def test_emits_playback_signal_per_frame(self, video_worker: VideoWorker) -> None:
         """_read emits sig_playback alongside each frame signal."""
         playbacks: list[Playback] = []
         video_worker.sig_playback.connect(playbacks.append)
@@ -250,9 +244,7 @@ class TestVideoWorkerRead:
 
         assert len(playbacks) >= 1
 
-    def test_emits_end_of_file_on_failed_read(
-        self, video_worker: VideoWorker
-    ) -> None:
+    def test_emits_end_of_file_on_failed_read(self, video_worker: VideoWorker) -> None:
         """_read emits sig_end_of_file and pauses when cv2 reports EOF."""
         eof_fired: list[bool] = []
         video_worker.sig_end_of_file.connect(lambda: eof_fired.append(True))

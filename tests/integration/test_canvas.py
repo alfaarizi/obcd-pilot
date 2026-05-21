@@ -1,4 +1,4 @@
-"""Integration tests for _FrameCanvas and Preview widget."""
+"""Integration tests for _Canvas and Preview widget."""
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -9,13 +9,13 @@ from PySide6.QtGui import QAction, QImage
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot.capture._types import CameraInfo
-from obcd_pilot.ui.components.preview import Preview, _FrameCanvas
+from obcd_pilot.ui.components.preview import Preview, _Canvas
 
 
 @pytest.fixture()
-def canvas(qtbot: QtBot) -> _FrameCanvas:
-    """A _FrameCanvas widget registered with qtbot for cleanup."""
-    widget = _FrameCanvas()
+def canvas(qtbot: QtBot) -> _Canvas:
+    """A _Canvas widget registered with qtbot for cleanup."""
+    widget = _Canvas()
     qtbot.addWidget(widget)
     return widget
 
@@ -35,20 +35,20 @@ def _create_solid_image(width: int = 16, height: int = 12) -> QImage:
     return image
 
 
-class TestFrameCanvasState:
-    """Tests for _FrameCanvas internal state management."""
+class TestCanvasState:
+    """Tests for _Canvas internal state management."""
 
-    def test_starts_with_no_image(self, canvas: _FrameCanvas) -> None:
-        """_FrameCanvas holds no image immediately after construction."""
+    def test_starts_with_no_image(self, canvas: _Canvas) -> None:
+        """_Canvas holds no image immediately after construction."""
         assert canvas._image is None
 
-    def test_set_stores_image(self, canvas: _FrameCanvas) -> None:
+    def test_set_stores_image(self, canvas: _Canvas) -> None:
         """set() replaces the internal image reference."""
         image = _create_solid_image()
         canvas.set(image)
         assert canvas._image is image
 
-    def test_set_replaces_previous_image(self, canvas: _FrameCanvas) -> None:
+    def test_set_replaces_previous_image(self, canvas: _Canvas) -> None:
         """Calling set() twice leaves only the most recent image."""
         first = _create_solid_image(8, 6)
         second = _create_solid_image(16, 12)
@@ -56,18 +56,18 @@ class TestFrameCanvasState:
         canvas.set(second)
         assert canvas._image is second
 
-    def test_clear_removes_image(self, canvas: _FrameCanvas) -> None:
+    def test_clear_removes_image(self, canvas: _Canvas) -> None:
         """clear() sets the internal image to None."""
         canvas.set(_create_solid_image())
         canvas.clear()
         assert canvas._image is None
 
 
-class TestFrameCanvasPaint:
-    """Tests for _FrameCanvas.paintEvent."""
+class TestCanvasPaint:
+    """Tests for _Canvas.paintEvent."""
 
     def test_paint_with_no_image_does_not_raise(
-        self, canvas: _FrameCanvas, qtbot: QtBot
+        self, canvas: _Canvas, qtbot: QtBot
     ) -> None:
         """paintEvent with _image=None completes without raising."""
         canvas.resize(100, 80)
@@ -76,7 +76,7 @@ class TestFrameCanvasPaint:
         canvas.update()
 
     def test_paint_with_image_does_not_raise(
-        self, canvas: _FrameCanvas, qtbot: QtBot
+        self, canvas: _Canvas, qtbot: QtBot
     ) -> None:
         """paintEvent with a valid QImage completes without raising."""
         canvas.set(_create_solid_image())
@@ -86,7 +86,7 @@ class TestFrameCanvasPaint:
         canvas.update()
 
     def test_paint_after_clear_does_not_raise(
-        self, canvas: _FrameCanvas, qtbot: QtBot
+        self, canvas: _Canvas, qtbot: QtBot
     ) -> None:
         """paintEvent after clear() does not raise even with no image."""
         canvas.set(_create_solid_image())
@@ -115,6 +115,10 @@ class TestPreviewConstruction:
     def test_playback_overlay_is_hidden_at_start(self, preview: Preview) -> None:
         """The playback overlay is invisible until a video is loaded."""
         assert not preview._playback_overlay.isVisible()
+
+    def test_canvas_message_visible_when_no_cameras(self, preview: Preview) -> None:
+        """Canvas message overlay is shown at startup when no camera is detected."""
+        assert not preview._canvas_message.isHidden()
 
     def test_initial_cameras_list_is_empty(
         self, preview: Preview, no_cameras: None
@@ -162,6 +166,16 @@ class TestPreviewSetCameras:
         preview._set_cameras([])
         assert preview._camera_menu.actions() == []
 
+    def test_set_cameras_shows_message_when_empty(self, preview: Preview) -> None:
+        """_set_cameras([]) shows the canvas message overlay."""
+        preview._set_cameras([])
+        assert not preview._canvas_message.isHidden()
+
+    def test_set_cameras_hides_message_when_populated(self, preview: Preview) -> None:
+        """_set_cameras hides the canvas message overlay when cameras are available."""
+        preview._set_cameras([CameraInfo("Cam A", 0)])
+        assert preview._canvas_message.isHidden()
+
 
 class TestPreviewCameraHandlers:
     """Tests for camera-related event handlers."""
@@ -187,22 +201,30 @@ class TestPreviewCameraHandlers:
         assert not preview._playback_overlay._is_playing
 
     def test_on_camera_error_clears_canvas(self, preview: Preview) -> None:
-        """_on_camera_error clears the frame canvas and stops the camera."""
+        """_on_camera_error clears the canvas and shows an error message."""
         preview._canvas.set(_create_solid_image())
         preview._on_camera_error("Device lost")
         assert preview._canvas._image is None
+        assert not preview._canvas_message.isHidden()
 
     def test_on_video_error_closes_video(self, preview: Preview) -> None:
-        """_on_video_error closes the video and clears the canvas."""
+        """_on_video_error closes video, clears canvas, and shows an error message."""
         preview._canvas.set(_create_solid_image())
         preview._on_video_error("Decode failed")
         assert preview._canvas._image is None
+        assert not preview._canvas_message.isHidden()
 
     def test_on_video_closed_clears_canvas(self, preview: Preview) -> None:
         """_on_video_closed discards the current frame."""
         preview._canvas.set(_create_solid_image())
         preview._on_video_closed()
         assert preview._canvas._image is None
+
+    def test_on_video_closed_restores_no_camera_message(self, preview: Preview) -> None:
+        """_on_video_closed re-shows no-camera message when no cameras are connected."""
+        preview._canvas_message.hide_message()
+        preview._on_video_closed()
+        assert not preview._canvas_message.isHidden()
 
 
 class TestPreviewRefreshCameras:
@@ -331,6 +353,13 @@ class TestPreviewCameraWorkerLifecycle:
 
         MockWorker.return_value.start.assert_called_once()
 
+    def test_start_camera_hides_canvas_message(self, preview: Preview) -> None:
+        """_start_camera hides the canvas message overlay."""
+        assert not preview._canvas_message.isHidden()
+        with patch("obcd_pilot.ui.components.preview.CameraWorker"):
+            preview._start_camera(CameraInfo("USB Cam", 0))
+        assert preview._canvas_message.isHidden()
+
     def test_stop_camera_clears_camera_worker(self, preview: Preview) -> None:
         """_stop_camera sets _camera_worker to None after stopping."""
         preview._camera_worker = MagicMock()
@@ -415,6 +444,16 @@ class TestPreviewVideoWorkerLifecycle:
             preview._load_video(path)
 
         assert not preview._playback_overlay.isHidden()
+
+    def test_load_video_hides_canvas_message(
+        self, preview: Preview, tmp_path: Path
+    ) -> None:
+        """_load_video hides the canvas message overlay."""
+        assert not preview._canvas_message.isHidden()
+        path = tmp_path / "clip.mp4"
+        with patch("obcd_pilot.ui.components.preview.VideoWorker"):
+            preview._load_video(path)
+        assert preview._canvas_message.isHidden()
 
     def test_load_video_starts_worker_thread(
         self, preview: Preview, tmp_path: Path
