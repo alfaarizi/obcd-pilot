@@ -321,7 +321,7 @@ class TestVideoWorkerRead:
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
 
-        # Read one good frame after the seek, hit EOF (which pauses), then stop the loop.
+        # Read one good frame after seek, hit EOF (which pauses), stop the loop.
         interrupted = [False, False, True]
         with (
             patch.object(
@@ -339,7 +339,8 @@ class TestVideoWorkerRead:
 
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
-        # Seeking pauses the worker, stop the loop before it waits for playback to resume.
+        # Seeking pauses the worker, stop the loop before
+        # it waits for playback to resume.
         interrupted = [False, True]
         with (
             patch.object(
@@ -360,7 +361,9 @@ class TestVideoWorkerRead:
         # Patch wait() to return immediately, then fire the interruption check.
         interrupted = [False, True]
         with (
-            patch.object(video_worker, "isInterruptionRequested", side_effect=interrupted),
+            patch.object(
+                video_worker, "isInterruptionRequested", side_effect=interrupted
+            ),
             patch.object(video_worker._playing_event, "wait"),
         ):
             video_worker._read(capture)
