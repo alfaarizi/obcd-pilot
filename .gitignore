@@ -41,3 +41,7 @@ htmlcov/
 # Runtime
 logs/
 *.log
+
+# Models and inference runtime
+*.pt
+runs/
