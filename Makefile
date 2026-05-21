@@ -9,7 +9,7 @@ lint:
 typecheck:
 	mypy src
 
-test:
+test: rcc
 	pytest
 
 all: rcc lint typecheck test

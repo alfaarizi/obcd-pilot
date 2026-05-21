@@ -7,7 +7,9 @@ from PySide6.QtWidgets import QApplication
 
 from obcd_pilot.ui.main_window import MainWindow
 
-if __name__ == "__main__":
+
+def main() -> None:
+    """Launch the OBCD Pilot Qt application."""
     app = QApplication(sys.argv)
 
     if getattr(sys, "frozen", False):
@@ -21,3 +23,7 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

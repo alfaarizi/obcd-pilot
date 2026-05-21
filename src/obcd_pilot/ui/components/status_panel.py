@@ -34,7 +34,7 @@ def _create_section_header(text: str) -> QLabel:
 
 
 class StatusPanel(QWidget):
-    """Right-side panel showing detection status and pipeline informations."""
+    """Right-side panel showing detection status and pipeline information."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -47,9 +47,9 @@ class StatusPanel(QWidget):
         root.setSpacing(0)
 
         root.addWidget(self._create_detection_status())
-        seperator_1 = separators.create_h_separator()
-        seperator_1.setObjectName("panel-separator")
-        root.addWidget(seperator_1)
+        separator_1 = separators.create_h_separator()
+        separator_1.setObjectName("panel-separator")
+        root.addWidget(separator_1)
 
         root.addWidget(self._create_alarm_status(), stretch=1)
         separator_2 = separators.create_h_separator()
