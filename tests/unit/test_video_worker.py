@@ -162,6 +162,18 @@ class TestVideoWorkerRun:
         assert len(errors) == 1
         assert "clip.mp4" in errors[0]
 
+    def test_run_releases_capture_when_file_cannot_be_opened(
+        self, video_worker: VideoWorker
+    ) -> None:
+        """run() releases VideoCapture even when the file fails to open."""
+        mock_capture = MagicMock()
+        mock_capture.isOpened.return_value = False
+
+        with patch("cv2.VideoCapture", return_value=mock_capture):
+            video_worker.run()
+
+        mock_capture.release.assert_called_once()
+
     def test_run_releases_capture_on_success(self, video_worker: VideoWorker) -> None:
         """run() releases VideoCapture in its finally block."""
         mock_capture = MagicMock()
@@ -210,9 +222,8 @@ class TestVideoWorkerRead:
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
 
-        # _read calls isInterruptionRequested twice per iteration:
-        # once in the while condition and once in the inner if-break guard.
-        interrupted = [False, False, True] + [True] * 20
+        # Read one good frame, hit EOF (which pauses), then stop the loop.
+        interrupted = [False, False, True]
         with (
             patch.object(
                 video_worker, "isInterruptionRequested", side_effect=interrupted
@@ -233,7 +244,8 @@ class TestVideoWorkerRead:
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
 
-        interrupted = [False, False, True] + [True] * 20
+        # Read one good frame, hit EOF (which pauses), then stop the loop.
+        interrupted = [False, False, True]
         with (
             patch.object(
                 video_worker, "isInterruptionRequested", side_effect=interrupted
@@ -251,7 +263,8 @@ class TestVideoWorkerRead:
         video_worker.play()
 
         capture = self._create_capture(reads=[(False, None)] * 5)
-        interrupted = [False, False, True] + [True] * 20
+        # First read fails immediately (EOF pauses), then stop the loop.
+        interrupted = [False, True]
         with patch.object(
             video_worker, "isInterruptionRequested", side_effect=interrupted
         ):
@@ -264,7 +277,8 @@ class TestVideoWorkerRead:
         video_worker.play()
 
         capture = self._create_capture(reads=[(False, None)] * 5)
-        interrupted = [False, False, True] + [True] * 20
+        # First read fails immediately (EOF pauses), then stop the loop.
+        interrupted = [False, True]
         with patch.object(
             video_worker, "isInterruptionRequested", side_effect=interrupted
         ):
@@ -285,7 +299,8 @@ class TestVideoWorkerRead:
             fps=0.0, reads=[(True, bgr)] + [(False, None)] * 5
         )
 
-        interrupted = [False, False, True] + [True] * 20
+        # Read one good frame, hit EOF (which pauses), then stop the loop.
+        interrupted = [False, False, True]
         with (
             patch.object(
                 video_worker, "isInterruptionRequested", side_effect=interrupted
@@ -306,7 +321,8 @@ class TestVideoWorkerRead:
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
 
-        interrupted = [False, False, True] + [True] * 20
+        # Read one good frame after the seek, hit EOF (which pauses), then stop the loop.
+        interrupted = [False, False, True]
         with (
             patch.object(
                 video_worker, "isInterruptionRequested", side_effect=interrupted
@@ -323,7 +339,8 @@ class TestVideoWorkerRead:
 
         bgr = _create_bgr_frame()
         capture = self._create_capture(reads=[(True, bgr)] + [(False, None)] * 5)
-        interrupted = [False, False, True] + [True] * 20
+        # Seeking pauses the worker, stop the loop before it waits for playback to resume.
+        interrupted = [False, True]
         with (
             patch.object(
                 video_worker, "isInterruptionRequested", side_effect=interrupted
@@ -333,6 +350,22 @@ class TestVideoWorkerRead:
             video_worker._read(capture)
 
         assert not video_worker.is_playing()
+
+    def test_exits_cleanly_when_interrupted_while_paused(
+        self, video_worker: VideoWorker
+    ) -> None:
+        """_read exits without reading when interrupted while waiting for playback."""
+        capture = self._create_capture()
+
+        # Patch wait() to return immediately, then fire the interruption check.
+        interrupted = [False, True]
+        with (
+            patch.object(video_worker, "isInterruptionRequested", side_effect=interrupted),
+            patch.object(video_worker._playing_event, "wait"),
+        ):
+            video_worker._read(capture)
+
+        capture.read.assert_not_called()
 
     def test_stops_immediately_when_interrupted(
         self, video_worker: VideoWorker

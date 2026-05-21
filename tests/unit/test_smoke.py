@@ -17,6 +17,7 @@ def test_subpackages_are_importable() -> None:
     import obcd_pilot.pipeline
     import obcd_pilot.ui
     import obcd_pilot.ui.components
+    import obcd_pilot.ui.utils
 
     assert obcd_pilot.alarm.__doc__ is not None
     assert obcd_pilot.capture.__doc__ is not None
@@ -24,6 +25,7 @@ def test_subpackages_are_importable() -> None:
     assert obcd_pilot.pipeline.__doc__ is not None
     assert obcd_pilot.ui.__doc__ is not None
     assert obcd_pilot.ui.components.__doc__ is not None
+    assert obcd_pilot.ui.utils.__doc__ is not None
 
 
 def test_worker_modules_are_importable() -> None:

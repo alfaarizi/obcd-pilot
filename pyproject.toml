@@ -60,7 +60,10 @@ addopts = "--cov=obcd_pilot --cov-branch --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["obcd_pilot"]
-omit = ["*/obcd_pilot/__main__.py"]
+omit = [
+    "*/obcd_pilot/__main__.py",
+    "*/obcd_pilot/ui/icons_rc.py",
+]
 
 [tool.coverage.report]
 fail_under = 90

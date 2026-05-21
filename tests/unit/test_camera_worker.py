@@ -65,6 +65,18 @@ class TestCameraWorkerRun:
         assert len(errors) == 1
         assert "0" in errors[0]
 
+    def test_run_releases_capture_when_device_cannot_be_opened(
+        self, camera_worker: CameraWorker
+    ) -> None:
+        """run() releases VideoCapture even when the device fails to open."""
+        mock_capture = MagicMock()
+        mock_capture.isOpened.return_value = False
+
+        with patch("cv2.VideoCapture", return_value=mock_capture):
+            camera_worker.run()
+
+        mock_capture.release.assert_called_once()
+
     def test_run_releases_capture_after_reading(
         self, camera_worker: CameraWorker
     ) -> None:

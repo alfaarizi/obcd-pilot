@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.3, pluggy-1.6.0
+PySide6 6.11.1 -- Qt runtime 6.11.1 -- Qt compiled 6.11.1
+rootdir: /Users/zizi/Desktop/obcd-pilot
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, qt-4.5.0
+collected 205 items
+
+tests/integration/test_canvas.py ....................................... [ 19%]
+...........................                                              [ 32%]
+tests/integration/test_main_window.py ..........                         [ 37%]
+tests/integration/test_monitor_view.py ....                              [ 39%]
+tests/integration/test_playback_overlay.py ...........................   [ 52%]
+tests/integration/test_status_panel.py .................                 [ 60%]
+tests/unit/test_camera_worker.py ............                            [ 66%]
+tests/unit/test_capture_types.py ..............                          [ 73%]
+tests/unit/test_playback_format.py ............                          [ 79%]
+tests/unit/test_retrieve_cameras.py ......                               [ 81%]
+tests/unit/test_separators.py ......                                     [ 84%]
+tests/unit/test_smoke.py ...                                             [ 86%]
+tests/unit/test_video_worker.py ............................             [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.0-final-0 _______________
+
+Name                                               Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------------------
+src/obcd_pilot/__init__.py                             2      0      0      0   100%
+src/obcd_pilot/alarm/__init__.py                       0      0      0      0   100%
+src/obcd_pilot/capture/__init__.py                     4      0      0      0   100%
+src/obcd_pilot/capture/_types.py                       7      0      0      0   100%
+src/obcd_pilot/capture/camera_worker.py               55      0     10      1    98%   63->72
+src/obcd_pilot/capture/video_worker.py                86      4     20      3    92%   93-96, 149->91, 152->91
+src/obcd_pilot/config/__init__.py                      0      0      0      0   100%
+src/obcd_pilot/pipeline/__init__.py                    0      0      0      0   100%
+src/obcd_pilot/ui/__init__.py                          0      0      0      0   100%
+src/obcd_pilot/ui/components/__init__.py               4      0      0      0   100%
+src/obcd_pilot/ui/components/playback_overlay.py      95      0      4      0   100%
+src/obcd_pilot/ui/components/preview.py              298      2     52      6    98%   117, 129, 163->exit, 164->163, 278->exit, 297->exit
+src/obcd_pilot/ui/components/status_panel.py         104      0      4      0   100%
+src/obcd_pilot/ui/main_window.py                      56      0      0      0   100%
+src/obcd_pilot/ui/monitor_view.py                     13      0      0      0   100%
+src/obcd_pilot/ui/utils/__init__.py                    0      0      0      0   100%
+src/obcd_pilot/ui/utils/separators.py                 11      0      0      0   100%
+----------------------------------------------------------------------------------------------
+TOTAL                                                735      6     90     10    98%
+Required test coverage of 90.0% reached. Total coverage: 97.82%
+============================= 205 passed in 1.52s ==============================
