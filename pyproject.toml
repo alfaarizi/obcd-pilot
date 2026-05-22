@@ -44,7 +44,10 @@ obcd-pilot = "obcd_pilot.__main__:main"
 
 [tool.ruff]
 target-version = "py311"
-exclude = ["**/icons_rc.py"]
+exclude = [
+    "**/icons_rc.py",
+    "**/pipeline/_obcd.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
@@ -52,7 +55,7 @@ select = ["E", "F", "I", "W"]
 [tool.mypy]
 strict = true
 python_version = "3.11"
-exclude = ["icons_rc\\.py$"]
+exclude = ["icons_rc\\.py$", "pipeline/_obcd\\.py$"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -63,6 +66,7 @@ source = ["obcd_pilot"]
 omit = [
     "*/obcd_pilot/__main__.py",
     "*/obcd_pilot/ui/icons_rc.py",
+    "*/obcd_pilot/pipeline/_obcd.py",
 ]
 
 [tool.coverage.report]
