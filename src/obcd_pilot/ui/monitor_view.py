@@ -1,5 +1,6 @@
 """Main Monitoring view."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QWidget,
@@ -25,3 +26,11 @@ class MonitorView(QWidget):
         root.addWidget(self._status_panel)
 
         self.setLayout(root)
+
+        self._preview.sig_detection.connect(self._status_panel.update_detection)
+        self._preview.sig_model_ready.connect(self._status_panel.set_model_status)
+        # Queued so the reset runs after any in-flight detection events.
+        self._preview.sig_pipeline_reset.connect(
+            self._status_panel.reset_detection,
+            Qt.ConnectionType.QueuedConnection,
+        )

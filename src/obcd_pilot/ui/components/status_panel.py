@@ -115,10 +115,11 @@ class StatusPanel(QWidget):
 
     @Slot()
     def reset_detection(self) -> None:
-        """Return to the idle status and clear per-frame fields, keeping the model."""
+        """Restore the idle state when the pipeline is torn down with the source."""
         self._status_icon.setPixmap(_ICON_NO_CHANGE.pixmap(_ICON_SIZE, _ICON_SIZE))
         self._status_label.setText("No change")
         self._status_desc_label.setText("—")
+        self._model.setText("—")
         self._inference.setText("—")
         self._confidence.setText("—")
         self._set_changed(False)
