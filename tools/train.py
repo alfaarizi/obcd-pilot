@@ -41,7 +41,7 @@ from tools.metrics import BinaryMetrics
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _VALID_VARIANTS: tuple[str, ...] = (*get_args(ModelVariant), "all")
 _SCENARIOS: dict[str, tuple[str, ...]] = {
-    "conv": ("replacewithnew", "add", "remove"),
+    "conv": ("replacewithnew", "add", "remove", "same", "replace"),
     "trans": ("gradually", "light"),
 }
 _NEGATIVE_SOURCES: tuple[str, ...] = ("aragement", "shifting")
