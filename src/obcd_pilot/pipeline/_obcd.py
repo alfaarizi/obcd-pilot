@@ -1,13 +1,14 @@
-"""OBCD model definitions, vendored from research notebooks.
+"""OBCD model definitions, vendored from the upstream OBCD notebooks.
 
-This module is excluded from linting and type checking, it is treated as vendored code.
+Excluded from linting and type checking, treated as vendored code.
 """
-
-from typing import Any
 
 import torch
 import torch.nn as nn
 from torchvision.ops import roi_align
+
+# Import YOLO from the submodule, as top-level import fails mypy strict mode.
+from ultralytics.models import YOLO
 
 _MATCH_THRESHOLD = 10.0
 _ROI_SIZE = (32, 32)
@@ -162,7 +163,7 @@ class ConvOBCDModel(nn.Module):
     def __init__(
         self,
         feature_extractor: nn.Module,
-        yolo_model: Any,
+        yolo_model: YOLO,
         num_classes: int,
         device: torch.device,
         feature_dim: int = 256,
@@ -412,7 +413,7 @@ class TransOBCDModel(nn.Module):
     def __init__(
         self,
         feature_extractor: nn.Module,
-        yolo_model: Any,
+        yolo_model: YOLO,
         num_classes: int,
         device: torch.device,
         feature_dim: int = 3072,
@@ -450,7 +451,11 @@ class TransOBCDModel(nn.Module):
             dropout=0.1,
             batch_first=True
         )
-        self.matched_transformer = nn.TransformerEncoder(matched_encoder_layer, num_layers=2)
+        # enable_nested_tensor=False: MPS lacks the kernel, and the optimization
+        # is negligible at OBCD sequence lengths (<= ~10 objects).
+        self.matched_transformer = nn.TransformerEncoder(
+            matched_encoder_layer, num_layers=2, enable_nested_tensor=False
+        )
 
         unmatched_encoder_layer = nn.TransformerEncoderLayer(
             d_model=self.d_model,
@@ -459,7 +464,9 @@ class TransOBCDModel(nn.Module):
             dropout=0.1,
             batch_first=True
         )
-        self.unmatched_transformer = nn.TransformerEncoder(unmatched_encoder_layer, num_layers=2)
+        self.unmatched_transformer = nn.TransformerEncoder(
+            unmatched_encoder_layer, num_layers=2, enable_nested_tensor=False
+        )
 
         self.combined_fc = nn.Sequential(
             nn.Linear(self.d_model * 5, self.d_model),

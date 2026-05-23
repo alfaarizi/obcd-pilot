@@ -68,10 +68,24 @@ def load_model(
         )
 
     if checkpoint is not None:
-        # ConvOBCD rebuilds layers each forward pass, so its checkpoint shapes
-        # no longer match the fresh model. Load conv loosely, trans strictly.
-        strict = variant == "trans"
-        model.load_state_dict(checkpoint["model_state_dict"], strict=strict)
+        # YOLO and feature_extractor are frozen and rebuilt from disk;
+        # never load their weights from the OBCD checkpoint.
+        state = {
+            k: v
+            for k, v in checkpoint["model_state_dict"].items()
+            if not k.startswith(("yolo_model.", "feature_extractor."))
+        }
+        if variant == "conv":
+            # metadata_fc.1 and combined_fc.0 are rebuilt each forward pass;
+            # their saved shapes will not match the fresh model.
+            state = {
+                k: v
+                for k, v in state.items()
+                if not k.startswith(("metadata_fc.1.", "combined_fc.0."))
+            }
+            model.load_state_dict(state, strict=False)
+        else:
+            model.load_state_dict(state, strict=False)
         logger.info("Loaded %s weights from %s", variant, checkpoint_path)
     else:
         logger.warning(
@@ -91,10 +105,10 @@ def load_model(
 
 
 def qimage_to_tensor(image: QImage) -> torch.Tensor:
-    """Convert a ``QImage`` to a ``(1, 3, 256, 256)`` RGB float tensor in ``[0, 1]``.
+    """Convert a QImage to a (1, 3, 256, 256) RGB float tensor in [0, 1].
 
     The image is stretched to 256x256 without preserving aspect ratio, matching
-    the ``Resize((256, 256))`` transform the models were trained with.
+    the Resize((256, 256)) transform the models were trained with.
     """
     scaled = image.convertToFormat(QImage.Format.Format_RGB888).scaled(
         _INPUT_SIZE,

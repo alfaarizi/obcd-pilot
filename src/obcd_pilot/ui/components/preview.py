@@ -48,13 +48,13 @@ _ICON_FILE_X = QIcon(":/icons/file-x.svg")
 _VIDEO_FILTER = "Video Files (*.mp4)"
 
 _MODEL_VARIANT: ModelVariant = "conv"
-_WEIGHTS_DIR = Path("weights")
+_WEIGHTS_DIR = Path(__file__).resolve().parents[4] / "weights"
 
 logger = logging.getLogger(__name__)
 
 
 def _checkpoint_path(variant: ModelVariant) -> Path | None:
-    """Return the checkpoint for ``variant`` if one is present on disk."""
+    """Return the checkpoint for variant if one is present on disk."""
     path = _WEIGHTS_DIR / f"obcd_{variant}.pth"
     return path if path.exists() else None
 

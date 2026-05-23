@@ -8,7 +8,7 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QAction, QImage
 from pytestqt.qtbot import QtBot
 
-from obcd_pilot.capture._types import CameraInfo
+from obcd_pilot.capture import CameraInfo
 from obcd_pilot.ui.components.preview import Preview, _Canvas
 
 

@@ -10,7 +10,7 @@ from PySide6.QtGui import QImage
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot.capture import Frame
-from obcd_pilot.pipeline._types import Detection, ModelVariant
+from obcd_pilot.pipeline import Detection, ModelVariant
 from obcd_pilot.pipeline.obcd_worker import OBCDWorker
 
 _LOAD_MODEL = "obcd_pilot.pipeline.obcd_worker.load_model"
@@ -79,7 +79,7 @@ class TestPushFrame:
     def test_emits_detection_on_second_frame(
         self, worker: OBCDWorker, qtbot: QtBot
     ) -> None:
-        """The first frame primes the previous tensor; the second emits."""
+        """The first frame primes the previous tensor. The second emits."""
         worker._model = MagicMock(return_value=torch.tensor([[0.8]]))
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)

@@ -125,7 +125,7 @@ class StatusPanel(QWidget):
         self._set_changed(False)
 
     def _set_changed(self, changed: bool) -> None:
-        """Toggle the ``changed`` style property so the QSS can recolour."""
+        """Toggle the changed style property so the QSS can recolour."""
         for widget in (
             self._detection_status,
             self._status_label,

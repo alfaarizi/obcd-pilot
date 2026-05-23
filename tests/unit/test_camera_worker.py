@@ -139,7 +139,7 @@ class TestCameraWorkerRead:
 
     def test_emits_frame_on_successful_read(self, camera_worker: CameraWorker) -> None:
         """_read emits sig_frame once for each successful capture.read() call."""
-        from obcd_pilot.capture._types import Frame
+        from obcd_pilot.capture import Frame
 
         frames: list[Frame] = []
         camera_worker.sig_frame.connect(frames.append)
@@ -167,7 +167,7 @@ class TestCameraWorkerRead:
         self, camera_worker: CameraWorker
     ) -> None:
         """_read substitutes _FPS_FALLBACK when the device reports fps=0."""
-        from obcd_pilot.capture._types import Frame
+        from obcd_pilot.capture import Frame
         from obcd_pilot.capture.camera_worker import _FPS_FALLBACK
 
         frames: list[Frame] = []

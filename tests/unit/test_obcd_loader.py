@@ -8,8 +8,7 @@ import torch
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
-from obcd_pilot.pipeline._loader import load_model, qimage_to_tensor
-from obcd_pilot.pipeline._types import ModelVariant
+from obcd_pilot.pipeline import ModelVariant, load_model, qimage_to_tensor
 
 _LOADER = "obcd_pilot.pipeline._loader"
 
@@ -75,13 +74,21 @@ class TestLoadModel:
             load_model(tmp_path / "absent.pth", "conv")
         conv_cls.return_value.load_state_dict.assert_not_called()
 
-    def test_loads_conv_checkpoint_without_strict(
+    def test_loads_conv_checkpoint_drops_yolo_and_rebuilt_layers(
         self, qapp: object, tmp_path: Path
     ) -> None:
-        """ConvOBCD weights load with strict=False to skip rebuilt layers."""
+        """ConvOBCD strips yolo_model.*, feature_extractor.*, and rebuilt layers."""
         checkpoint = tmp_path / "obcd_conv.pth"
         checkpoint.touch()
-        state = {"model_state_dict": {"weight": 1}}
+        state = {
+            "model_state_dict": {
+                "spatial_fc.0.weight": 1,
+                "yolo_model.model.0.conv.weight": 99,
+                "feature_extractor.0.weight": 99,
+                "metadata_fc.1.weight": 99,
+                "combined_fc.0.weight": 99,
+            }
+        }
         with (
             patch(f"{_LOADER}.YOLO"),
             patch(f"{_LOADER}.ConvOBCDModel") as conv_cls,
@@ -90,16 +97,23 @@ class TestLoadModel:
         ):
             load_model(checkpoint, "conv")
         conv_cls.return_value.load_state_dict.assert_called_once_with(
-            {"weight": 1}, strict=False
+            {"spatial_fc.0.weight": 1}, strict=False
         )
 
-    def test_loads_trans_checkpoint_strict_with_max_objects(
+    def test_loads_trans_checkpoint_drops_yolo_and_reads_max_objects(
         self, qapp: object, tmp_path: Path
     ) -> None:
-        """TransOBCD reads max_objects and loads weights strictly."""
+        """TransOBCD reads max_objects and strips frozen submodule weights."""
         checkpoint = tmp_path / "obcd_trans.pth"
         checkpoint.touch()
-        state = {"model_state_dict": {"weight": 1}, "max_objects": 7}
+        state = {
+            "model_state_dict": {
+                "feature_embed.weight": 1,
+                "yolo_model.model.0.conv.weight": 99,
+                "feature_extractor.0.weight": 99,
+            },
+            "max_objects": 7,
+        }
         with (
             patch(f"{_LOADER}.YOLO"),
             patch(f"{_LOADER}.ConvOBCDModel"),
@@ -109,5 +123,5 @@ class TestLoadModel:
             load_model(checkpoint, "trans")
         assert trans_cls.call_args.kwargs["max_objects"] == 7
         trans_cls.return_value.load_state_dict.assert_called_once_with(
-            {"weight": 1}, strict=True
+            {"feature_embed.weight": 1}, strict=False
         )

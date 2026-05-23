@@ -69,7 +69,7 @@ def test_pipeline_reset_is_routed_to_status_panel(
     view._preview.sig_model_ready.emit("ConvOBCD")
     view._preview.sig_detection.emit(_detection(change_detected=True))
     view._preview.sig_pipeline_reset.emit()
-    # The reset uses a queued connection; wait for it to land.
+    # The reset uses a queued connection. Wait for it to land.
     qtbot.waitUntil(
         lambda: view._status_panel._status_label.text() == "No change",
         timeout=1000,

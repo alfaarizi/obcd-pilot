@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pytestqt.qtbot import QtBot
 
-from obcd_pilot.capture._types import CameraInfo
+from obcd_pilot.capture import CameraInfo
 from obcd_pilot.ui.components.preview import Preview
 
 StubPipeline = tuple[MagicMock, MagicMock]

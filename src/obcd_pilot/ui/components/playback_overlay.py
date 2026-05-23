@@ -20,7 +20,7 @@ _ICON_CLOSE = QIcon(":/icons/close.svg")
 
 
 def _format_timestamp(ms: float) -> str:
-    """Convert milliseconds to ``mm:ss``."""
+    """Convert milliseconds to mm:ss."""
     total_seconds = int(ms / 1000)
     return f"{total_seconds // 60:02d}:{total_seconds % 60:02d}"
 

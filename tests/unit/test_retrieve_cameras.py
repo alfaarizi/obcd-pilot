@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import cv2
 
-from obcd_pilot.capture._types import CameraInfo
+from obcd_pilot.capture import CameraInfo
 from obcd_pilot.capture.camera_worker import _BACKENDS, retrieve_cameras
 
 

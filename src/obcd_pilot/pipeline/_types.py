@@ -13,8 +13,8 @@ class Detection:
     Attributes:
         frame_id: Monotonically increasing counter for the second frame.
         timestamp_ms: Wall-clock time of the detection in milliseconds.
-        change_detected: ``True`` when ``confidence`` clears the threshold.
-        confidence: Sigmoid output in ``[0.0, 1.0]``.
+        change_detected: True when confidence clears the threshold.
+        confidence: Sigmoid output in [0.0, 1.0].
         inference_ms: End-to-end inference time in milliseconds.
         model_name: name of the model that produced the result.
     """

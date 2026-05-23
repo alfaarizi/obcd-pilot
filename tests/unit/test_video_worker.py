@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from obcd_pilot.capture._types import Frame, Playback
+from obcd_pilot.capture import Frame, Playback
 from obcd_pilot.capture.video_worker import _FPS_FALLBACK, VideoWorker
 
 
@@ -14,7 +14,7 @@ from obcd_pilot.capture.video_worker import _FPS_FALLBACK, VideoWorker
 def video_worker(qapp: object, tmp_path: Path) -> VideoWorker:
     """A VideoWorker pointing at a non-existent dummy path.
 
-    The path is never opened by these tests; it is only used to satisfy
+    The path is never opened by these tests. It is only used to satisfy
     the constructor signature.
     """
     return VideoWorker(path=tmp_path / "clip.mp4")
@@ -37,7 +37,7 @@ class TestVideoWorkerConstruction:
         assert video_worker._seek_index is None
 
     def test_eof_flag_is_false_at_start(self, video_worker: VideoWorker) -> None:
-        """is_eof starts False; the worker has not reached end-of-file."""
+        """is_eof starts False. The worker has not reached end-of-file."""
         assert not video_worker._is_eof
 
 
