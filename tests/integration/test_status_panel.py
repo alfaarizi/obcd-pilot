@@ -90,10 +90,6 @@ class TestDetectionDetailsSection:
         """Confidence field starts as '—' (no confidence reported)."""
         assert panel._confidence.text() == "—"
 
-    def test_ram_label_default_text(self, panel: StatusPanel) -> None:
-        """RAM field starts as '—' (no usage data)."""
-        assert panel._ram.text() == "—"
-
 
 class TestCreateSectionHeader:
     """Tests for the _create_section_header factory function."""

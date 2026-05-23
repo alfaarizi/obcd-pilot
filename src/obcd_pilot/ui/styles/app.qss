@@ -99,15 +99,33 @@ QLabel#section-header {
     color: rgba(245, 245, 245, 0.36);
 }
 
+QWidget#detection-status {
+    background: transparent;
+    border-left: 3px solid transparent;
+}
+
+QWidget#detection-status[changed="true"] {
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid #ef4444;
+}
+
 QLabel#status-label {
     font-size: 14px;
     font-weight: 600;
     color: #f5f5f5;
 }
 
+QLabel#status-label[changed="true"] {
+    color: #ef4444;
+}
+
 QLabel#status-desc-label {
     font-size: 11px;
     color: rgba(245, 245, 245, 0.48);
+}
+
+QLabel#status-desc-label[changed="true"] {
+    color: rgba(239, 68, 68, 0.78);
 }
 
 QLabel#alarm-dot {
