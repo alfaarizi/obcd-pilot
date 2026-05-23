@@ -43,7 +43,8 @@ def load_model(
     checkpoint: _Checkpoint | None = None
     if checkpoint_path is not None and checkpoint_path.exists():
         checkpoint = cast(
-            _Checkpoint, torch.load(checkpoint_path, map_location=_DEVICE)
+            _Checkpoint,
+            torch.load(checkpoint_path, map_location=_DEVICE, weights_only=True),
         )
 
     model: OBCDModel
