@@ -15,5 +15,6 @@ def autodetect() -> torch.device:
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
+
     logger.info("Training device: %s", device)
     return device

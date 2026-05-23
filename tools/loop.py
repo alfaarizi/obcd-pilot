@@ -14,8 +14,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from obcd_pilot.pipeline import ConvOBCDModel, OBCDModel, TransOBCDModel
-from tools.metrics import BinaryMetrics
-from tools.metrics import compute as compute_metrics
+from tools.metrics import BinaryMetrics, compute_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +32,12 @@ class EpochReport:
 def _to_device(
     batch: Mapping[str, torch.Tensor], device: torch.device
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    # non_blocking=True overlaps the host->device copy with the previous
+    # batch's compute when pin_memory is on (no-op otherwise).
     return (
-        batch["image1"].to(device),
-        batch["image2"].to(device),
-        batch["label"].to(device),
+        batch["image1"].to(device, non_blocking=True),
+        batch["image2"].to(device, non_blocking=True),
+        batch["label"].to(device, non_blocking=True),
     )
 
 
@@ -52,14 +53,15 @@ def _run_epoch(
     train_mode = optimizer is not None
     if train_mode:
         model.set_train()
+        if isinstance(model, ConvOBCDModel):
+            model.temporal_fc.train()
     else:
         model.set_eval()
-        # ConvOBCD.set_eval() misses temporal_fc. Its Dropout would otherwise
-        # stay active and inject noise into the val/test metrics.
         if isinstance(model, ConvOBCDModel):
             model.temporal_fc.eval()
 
-    losses = 0.0
+    loss_sum = 0.0
+    n_samples = 0
     all_preds: list[torch.Tensor] = []
     all_labels: list[torch.Tensor] = []
     bar = tqdm(loader, desc=desc, leave=False)
@@ -81,47 +83,57 @@ def _run_epoch(
                 assert optimizer is not None
                 optimizer.step()
 
-            losses += float(loss.item())
+            # Cache loss.item() once, each call forces a GPU->CPU sync.
+            loss_value = float(loss.item())
+            # Weight by batch size so partial last batches do not skew the mean.
+            batch_size = label.size(0)
+            loss_sum += loss_value * batch_size
+            n_samples += batch_size
+
             with torch.no_grad():
-                hard = (preds.detach() > 0.5).float().cpu().squeeze(1)
-                all_preds.append(hard)
+                hard_preds = (preds.detach() > 0.5).float().cpu().squeeze(1)
+                all_preds.append(hard_preds)
                 all_labels.append(label.detach().cpu())
 
-            bar.set_postfix(loss=f"{loss.item():.4f}")
+            bar.set_postfix(loss=f"{loss_value:.4f}")
 
     preds_t = torch.cat(all_preds) if all_preds else torch.empty(0)
     labels_t = torch.cat(all_labels) if all_labels else torch.empty(0)
     metrics = compute_metrics(preds_t, labels_t)
-    mean_loss = losses / max(len(loader), 1)
+    mean_loss = loss_sum / max(n_samples, 1)
     return mean_loss, metrics
 
 
-def _save_conv(m: ConvOBCDModel, path: Path) -> None:
+def _save_conv(model: ConvOBCDModel, path: Path) -> None:
     """Write the ConvOBCD checkpoint in the notebook's documented schema."""
     torch.save(
         {
-            "model_state_dict": m.state_dict(),
-            "metadata_fc_state_dict": m.metadata_fc.state_dict(),
-            "feature_fc_state_dict": m.feature_fc.state_dict(),
-            "combined_fc_state_dict": m.combined_fc.state_dict(),
-            "whole_metadata_fc_state_dict": m.whole_metadata_fc.state_dict(),
+            "model_state_dict": model.state_dict(),
+            "metadata_fc_state_dict": model.metadata_fc.state_dict(),
+            "feature_fc_state_dict": model.feature_fc.state_dict(),
+            "combined_fc_state_dict": model.combined_fc.state_dict(),
+            "whole_metadata_fc_state_dict": model.whole_metadata_fc.state_dict(),
         },
         path,
     )
 
 
-def _save_trans(m: TransOBCDModel, path: Path) -> None:
+def _save_trans(model: TransOBCDModel, path: Path) -> None:
     """Write the TransOBCD checkpoint, including the runtime max_objects."""
     torch.save(
         {
-            "model_state_dict": m.state_dict(),
-            "feature_embed_state_dict": m.feature_embed.state_dict(),
-            "metadata_embed_state_dict": m.metadata_embed.state_dict(),
-            "whole_metadata_embed_state_dict": m.whole_metadata_embed.state_dict(),
-            "matched_transformer_state_dict": m.matched_transformer.state_dict(),
-            "unmatched_transformer_state_dict": m.unmatched_transformer.state_dict(),
-            "combined_fc_state_dict": m.combined_fc.state_dict(),
-            "max_objects": int(m.max_objects),
+            "model_state_dict": model.state_dict(),
+            "feature_embed_state_dict": model.feature_embed.state_dict(),
+            "metadata_embed_state_dict": model.metadata_embed.state_dict(),
+            "whole_metadata_embed_state_dict": (
+                model.whole_metadata_embed.state_dict()
+            ),
+            "matched_transformer_state_dict": (model.matched_transformer.state_dict()),
+            "unmatched_transformer_state_dict": (
+                model.unmatched_transformer.state_dict()
+            ),
+            "combined_fc_state_dict": model.combined_fc.state_dict(),
+            "max_objects": int(model.max_objects),
         },
         path,
     )

@@ -91,6 +91,7 @@ def collect_pairs(
         scenario_pairs = _scenario_pairs(root, scenario)
         positives = [p for p in scenario_pairs if p.is_positive]
         negatives = [p for p in scenario_pairs if not p.is_positive]
+
         out.extend(positives)
         if num_negatives_per_scenario is None:
             out.extend(negatives)
@@ -113,31 +114,53 @@ def split_pairs(
     val_ratio: float,
     seed: int,
 ) -> Split:
-    """Shuffle and split pairs into train/val/test using the notebook's ratios."""
+    """Stratified train/val/test split.
+
+    Mirrors sklearn's StratifiedShuffleSplit: shuffle each class
+    independently, slice by ratio, then re-shuffle inside each split.
+    """
     if not (0.0 < train_ratio < 1.0 and 0.0 < val_ratio < 1.0):
         raise ValueError("Train/val ratios must be in (0, 1).")
     if train_ratio + val_ratio >= 1.0:
         raise ValueError("Train + val ratios must leave room for the test split.")
 
-    items = list(pairs)
-    random.Random(seed).shuffle(items)
-    n = len(items)
-    n_train = int(n * train_ratio)
-    n_val = int(n * val_ratio)
-    return Split(
-        train=items[:n_train],
-        val=items[n_train : n_train + n_val],
-        test=items[n_train + n_val :],
-    )
+    # Sub-seed keeps this RNG stream independent of collect_pairs.
+    rng = random.Random(seed + 1)
+    positives = [p for p in pairs if p.is_positive]
+    negatives = [p for p in pairs if not p.is_positive]
+
+    train: list[Pair] = []
+    val: list[Pair] = []
+    test: list[Pair] = []
+    for class_items in (positives, negatives):
+        rng.shuffle(class_items)
+        n = len(class_items)
+        n_tr = int(n * train_ratio)
+        n_va = int(n * val_ratio)
+        train.extend(class_items[:n_tr])
+        val.extend(class_items[n_tr : n_tr + n_va])
+        test.extend(class_items[n_tr + n_va :])
+
+    rng.shuffle(train)
+    rng.shuffle(val)
+    rng.shuffle(test)
+    return Split(train=train, val=val, test=test)
 
 
 class PairDataset(Dataset[dict[str, torch.Tensor]]):
-    """Yields the dict shape the notebook training loop expects."""
+    """Yields the dict shape the notebook training loop expects.
+
+    The transform receives both images in one call so torchvision v2 samples
+    augmentation params once and applies them to both, keeping the pair
+    aligned (no fake change from desynchronised rotations or flips).
+    """
 
     def __init__(
         self,
         pairs: Sequence[Pair],
-        transform: Callable[[Image.Image], torch.Tensor],
+        transform: Callable[
+            [Image.Image, Image.Image], tuple[torch.Tensor, torch.Tensor]
+        ],
     ) -> None:
         self._pairs = list(pairs)
         self._transform = transform
@@ -147,11 +170,15 @@ class PairDataset(Dataset[dict[str, torch.Tensor]]):
 
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         pair = self._pairs[index]
-        img_a = Image.open(pair.image_a).convert("RGB")
-        img_b = Image.open(pair.image_b).convert("RGB")
+        with Image.open(pair.image_a) as src:
+            img_a = src.convert("RGB")
+        with Image.open(pair.image_b) as src:
+            img_b = src.convert("RGB")
+
+        img_a_t, img_b_t = self._transform(img_a, img_b)
         return {
-            "image1": self._transform(img_a),
-            "image2": self._transform(img_b),
+            "image1": img_a_t,
+            "image2": img_b_t,
             "label": torch.tensor(1.0 if pair.is_positive else 0.0),
         }
 

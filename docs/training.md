@@ -55,6 +55,7 @@ zeros marks negative.
 | `--val-ratio FLOAT` | `0.2` | Val split fraction (test is the remainder). |
 | `--device {auto,cpu,cuda,mps}` | `auto` | Compute device. `auto` picks CUDA, then MPS, then CPU. |
 | `--yolo-weights STR` | `yolov8n.pt` | YOLO weights file. |
+| `--balance-classes` / `--no-balance-classes` | on | Sample positives and negatives equally per batch via `WeightedRandomSampler`. Disable for notebook-fidelity uniform sampling. |
 | `-h, --help` | | Print help and exit. |
 
 Defaults match the upstream OBCD notebooks. Per-variant scenarios are fixed.
