@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/monitor.svg</file>
-        <file>icons/shield-check.svg</file>
         <file>icons/upload.svg</file>
         <file>icons/video-off.svg</file>
         <file>icons/video.svg</file>
@@ -11,5 +10,7 @@
         <file>icons/close.svg</file>
         <file>icons/camera-off.svg</file>
         <file>icons/file-x.svg</file>
+        <file>icons/circle-check-big.svg</file>
+        <file>icons/triangle-alert.svg</file>
     </qresource>
 </RCC>

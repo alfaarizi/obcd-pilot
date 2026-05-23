@@ -70,7 +70,7 @@ class StatusPanel(QWidget):
         v_layout.setSpacing(6)
 
         self._status_icon = QLabel()
-        self._status_icon.setPixmap(QIcon(":/icons/shield-check.svg").pixmap(24, 24))
+        self._status_icon.setPixmap(QIcon(":/icons/circle-check-big.svg").pixmap(24, 24))
         self._status_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status_icon.setFixedSize(48, 48)
         v_layout.addWidget(self._status_icon, alignment=Qt.AlignmentFlag.AlignCenter)
