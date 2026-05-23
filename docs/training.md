@@ -33,8 +33,7 @@ datasets/
   shifting/
 ```
 
-Labels are binary PNG masks. Any non-zero pixel marks a positive pair, all
-zeros marks negative.
+Labels are binary PNG masks. Any non-zero pixel marks a positive pair, all zeros marks negative.
 
 ## CLI reference
 
@@ -58,9 +57,7 @@ zeros marks negative.
 | `--balance-classes` / `--no-balance-classes` | on | Sample positives and negatives equally per batch via `WeightedRandomSampler`. Disable for notebook-fidelity uniform sampling. |
 | `-h, --help` | | Print help and exit. |
 
-Defaults match the upstream OBCD notebooks. Per-variant scenarios are fixed.
-Conv uses `replacewithnew`, `add`, `remove`. Trans uses `gradually`, `light`.
-Both add negatives from `aragement` and `shifting`.
+Defaults match the upstream OBCD notebooks. Per-variant scenarios are fixed. Conv uses `replacewithnew`, `add`, `remove`. Trans uses `gradually`, `light`. Both add negatives from `aragement` and `shifting`.
 
 ## Colab
 
@@ -78,10 +75,6 @@ Both add negatives from `aragement` and `shifting`.
 
 ## Caveats
 
-Most Obcdset labels on disk are all-zero. For example, `add/` has 7 positives
-in 288 frames. The notebook selection rule keeps only the labelled
-transitions, so the effective training set is small.
+Most Obcdset labels on disk are all-zero. For example, `add/` has 7 positives in 288 frames. The notebook selection rule keeps only the labelled transitions, so the effective training set is small.
 
-ConvOBCD's `metadata_fc[1]` and `combined_fc[0]` are rebuilt every forward
-pass and their saved weights are stripped at load time. This is intentional and
-matches the research training behaviour.
+ConvOBCD's `metadata_fc[1]` and `combined_fc[0]` are rebuilt every forward pass and their saved weights are stripped at load time. This is intentional and matches the research training behaviour.
