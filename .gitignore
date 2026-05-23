@@ -42,6 +42,11 @@ htmlcov/
 logs/
 *.log
 
-# Models and inference runtime
+# Datasets, models, and training artifacts
+datasets/
 *.pt
+*.pth
 runs/
+weights/*
+!weights/README.md
+

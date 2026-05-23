@@ -30,6 +30,10 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-qt",
+    "types-tqdm",
+]
+training = [
+    "tqdm",
 ]
 
 [project.urls]
@@ -56,6 +60,11 @@ select = ["E", "F", "I", "W"]
 strict = true
 python_version = "3.11"
 exclude = ["icons_rc\\.py$", "pipeline/_obcd\\.py$"]
+
+# torchvision has no py.typed marker and no typeshed stubs.
+[[tool.mypy.overrides]]
+module = ["torchvision.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
