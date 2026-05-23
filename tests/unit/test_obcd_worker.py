@@ -10,7 +10,7 @@ from PySide6.QtGui import QImage
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot.capture import Frame
-from obcd_pilot.pipeline._types import Detection
+from obcd_pilot.pipeline._types import Detection, ModelVariant
 from obcd_pilot.pipeline.obcd_worker import OBCDWorker
 
 _LOAD_MODEL = "obcd_pilot.pipeline.obcd_worker.load_model"
@@ -44,7 +44,7 @@ class TestStartModel:
         self,
         qapp: object,
         tmp_path: Path,
-        variant: str,
+        variant: ModelVariant,
         has_checkpoint: bool,
         expected_name: str,
     ) -> None:
@@ -101,9 +101,9 @@ class TestPushFrame:
     @pytest.mark.parametrize(
         "confidence,expected_change",
         [
-            (0.8, True),    # strictly above 0.5
-            (0.5, False),   # exactly at 0.5
-            (0.2, False),   # below 0.5
+            (0.8, True),  # strictly above 0.5
+            (0.5, False),  # exactly at 0.5
+            (0.2, False),  # below 0.5
         ],
     )
     def test_change_flag_is_exclusive_at_threshold(

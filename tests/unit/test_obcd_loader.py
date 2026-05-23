@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage
 
 from obcd_pilot.pipeline._loader import load_model, qimage_to_tensor
+from obcd_pilot.pipeline._types import ModelVariant
 
 _LOADER = "obcd_pilot.pipeline._loader"
 
@@ -47,7 +48,7 @@ class TestLoadModel:
         [("conv", True), ("trans", False)],
     )
     def test_evals_subcomponents_without_yolo_landmine(
-        self, qapp: object, variant: str, evals_temporal_fc: bool
+        self, qapp: object, variant: ModelVariant, evals_temporal_fc: bool
     ) -> None:
         """eval() must not be called on the composite (would trigger YOLO training)."""
         with (
