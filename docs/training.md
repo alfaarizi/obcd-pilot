@@ -18,6 +18,18 @@ Outputs land in `weights/`:
 
 All files in `weights/` are gitignored.
 
+## Deploying checkpoints to the desktop app
+
+In development, launch the app from the repo root and the runtime worker picks up `./weights/`. No configuration needed.
+
+For installed builds, copy `obcd_{variant}.pth` into the per-user Qt `AppDataLocation`:
+
+- macOS: `~/Library/Application Support/obcd-pilot/weights`
+- Linux: `~/.local/share/obcd-pilot/weights`
+- Windows: `%APPDATA%\obcd-pilot\weights`
+
+To point at any other folder explicitly, set `OBCD_WEIGHTS_DIR`.
+
 ## Dataset layout
 
 Place Obcdset under `datasets/` at the project root. Override with `--data-root`.

@@ -63,14 +63,13 @@ logger = logging.getLogger(__name__)
 
 
 def _weights_dir() -> Path:
-    """Resolve the checkpoint directory.
-
-    Honors OBCD_WEIGHTS_DIR, otherwise uses the Qt per-user app data
-    location (e.g. ~/Library/Application Support/obcd-pilot/weights on macOS).
-    """
+    """Checkpoint dir: OBCD_WEIGHTS_DIR, else <cwd>/weights, else Qt AppDataLocation."""
     override = os.environ.get("OBCD_WEIGHTS_DIR")
     if override:
         return Path(override)
+    cwd_weights = Path.cwd() / "weights"
+    if cwd_weights.is_dir():
+        return cwd_weights
     base = QStandardPaths.writableLocation(
         QStandardPaths.StandardLocation.AppDataLocation
     )

@@ -6,8 +6,9 @@ Usage:
     python -m tools.train --variant all --data-root datasets
 
 Model classes are imported from obcd_pilot.pipeline so training and
-inference share one architecture. Checkpoints land at
-weights/obcd_{variant}.pth, which is where the runtime worker looks.
+inference share one architecture. Checkpoints land at weights/obcd_{variant}.pth.
+The desktop app picks them up when launched from the repo root.
+See docs/training.md for deployment to installed builds.
 """
 
 import argparse
@@ -251,8 +252,14 @@ def _build_dataloaders(
 def _balanced_sampler(pairs: list[ds.Pair]) -> WeightedRandomSampler:
     """Draw positives and negatives with equal expected count per batch."""
     labels = torch.tensor([int(p.is_positive) for p in pairs])
-    class_counts = torch.bincount(labels, minlength=2).float()
-    weights = (1.0 / class_counts)[labels].tolist()
+    class_counts = torch.bincount(labels, minlength=2)
+    if class_counts.min() == 0:
+        raise ValueError(
+            f"Balanced sampling needs both classes, got "
+            f"{int(class_counts[1])} positives and {int(class_counts[0])} "
+            f"negatives. Pass --no-balance-classes."
+        )
+    weights = (1.0 / class_counts.float())[labels].tolist()
     return WeightedRandomSampler(weights, num_samples=len(pairs), replacement=True)
 
 
