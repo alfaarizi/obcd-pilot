@@ -23,6 +23,13 @@ def _frame() -> Frame:
     return Frame(image, 16, 12, 30.0)
 
 
+def _mock_model(**kwargs: object) -> MagicMock:
+    """MagicMock model with a real torch.device so tensor.to() works."""
+    model = MagicMock(**kwargs)
+    model.device = torch.device("cpu")
+    return model
+
+
 @pytest.fixture()
 def worker(qapp: object) -> OBCDWorker:
     """An untrained ConvOBCD worker with no checkpoint."""
@@ -80,7 +87,7 @@ class TestPushFrame:
         self, worker: OBCDWorker, qtbot: QtBot
     ) -> None:
         """The first frame primes the previous tensor. The second emits."""
-        worker._model = MagicMock(return_value=torch.tensor([[0.8]]))
+        worker._model = _mock_model(return_value=torch.tensor([[0.8]]))
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)
 
@@ -114,7 +121,7 @@ class TestPushFrame:
         expected_change: bool,
     ) -> None:
         """change_detected is True only when confidence > 0.5."""
-        worker._model = MagicMock(return_value=torch.tensor([[confidence]]))
+        worker._model = _mock_model(return_value=torch.tensor([[confidence]]))
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)
 
@@ -137,7 +144,7 @@ class TestPushFrame:
                 worker.push_frame(_frame())
             return torch.tensor([[0.9]])
 
-        worker._model = MagicMock(side_effect=infer)
+        worker._model = _mock_model(side_effect=infer)
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)
 

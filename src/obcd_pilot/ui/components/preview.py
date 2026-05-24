@@ -4,9 +4,19 @@ Displays camera frames.
 """
 
 import logging
+import os
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt, QThread, Signal
+from PySide6.QtCore import (
+    QEvent,
+    QObject,
+    QPoint,
+    QSize,
+    QStandardPaths,
+    Qt,
+    QThread,
+    Signal,
+)
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -48,14 +58,28 @@ _ICON_FILE_X = QIcon(":/icons/file-x.svg")
 _VIDEO_FILTER = "Video Files (*.mp4)"
 
 _MODEL_VARIANT: ModelVariant = "conv"
-_WEIGHTS_DIR = Path(__file__).resolve().parents[4] / "weights"
 
 logger = logging.getLogger(__name__)
 
 
+def _weights_dir() -> Path:
+    """Resolve the checkpoint directory.
+
+    Honors OBCD_WEIGHTS_DIR, otherwise uses the Qt per-user app data
+    location (e.g. ~/Library/Application Support/obcd-pilot/weights on macOS).
+    """
+    override = os.environ.get("OBCD_WEIGHTS_DIR")
+    if override:
+        return Path(override)
+    base = QStandardPaths.writableLocation(
+        QStandardPaths.StandardLocation.AppDataLocation
+    )
+    return Path(base) / "weights"
+
+
 def _checkpoint_path(variant: ModelVariant) -> Path | None:
     """Return the checkpoint for variant if one is present on disk."""
-    path = _WEIGHTS_DIR / f"obcd_{variant}.pth"
+    path = _weights_dir() / f"obcd_{variant}.pth"
     return path if path.exists() else None
 
 
@@ -256,11 +280,14 @@ class Preview(QWidget):
             variant=_MODEL_VARIANT,
             checkpoint_path=_checkpoint_path(_MODEL_VARIANT),
         )
-        obcd_thread = QThread()
+        obcd_thread = QThread(self)
         obcd_worker.moveToThread(obcd_thread)
         obcd_worker.sig_detection.connect(self.sig_detection)
         obcd_worker.sig_model_ready.connect(self.sig_model_ready)
         obcd_thread.started.connect(obcd_worker.start_model)
+        # Reclaim both after quit() per https://doc.qt.io/qt-6/qthread.html
+        obcd_thread.finished.connect(obcd_worker.deleteLater)
+        obcd_thread.finished.connect(obcd_thread.deleteLater)
         obcd_thread.start()
 
         self._obcd_worker = obcd_worker

@@ -10,6 +10,8 @@ from obcd_pilot.ui.main_window import MainWindow
 
 def main() -> None:
     """Launch the OBCD Pilot Qt application."""
+    QApplication.setOrganizationName("OBCD")
+    QApplication.setApplicationName("obcd-pilot")
     app = QApplication(sys.argv)
 
     if getattr(sys, "frozen", False):

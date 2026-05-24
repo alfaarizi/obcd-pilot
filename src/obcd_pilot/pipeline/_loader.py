@@ -49,6 +49,7 @@ def load_model(
     num_classes: int = 80,
 ) -> OBCDModel:
     """Build an OBCD model and load weights when a checkpoint is available."""
+    device = autodetect()
     if not Path(_YOLO_WEIGHTS).exists():
         logger.warning(
             "YOLO weights %r not found on disk; ultralytics may attempt a "
@@ -56,13 +57,17 @@ def load_model(
             _YOLO_WEIGHTS,
         )
     yolo = YOLO(_YOLO_WEIGHTS)
+    # Move and freeze the inner nn.Module directly. yolo.eval() triggers training.
+    yolo_inner = cast(torch.nn.Module, yolo.model)
+    yolo_inner.to(device).eval()
+    yolo_inner.requires_grad_(False)
     feature_extractor = torch.nn.Sequential()
 
     checkpoint: _Checkpoint | None = None
     if checkpoint_path is not None and checkpoint_path.exists():
         checkpoint = cast(
             _Checkpoint,
-            torch.load(checkpoint_path, map_location=autodetect(), weights_only=True),
+            torch.load(checkpoint_path, map_location=device, weights_only=True),
         )
 
     model: OBCDModel
@@ -71,7 +76,7 @@ def load_model(
             feature_extractor=feature_extractor,
             yolo_model=yolo,
             num_classes=num_classes,
-            device=autodetect(),
+            device=device,
         )
     else:
         max_objects = 10
@@ -81,7 +86,7 @@ def load_model(
             feature_extractor=feature_extractor,
             yolo_model=yolo,
             num_classes=num_classes,
-            device=autodetect(),
+            device=device,
             max_objects=max_objects,
         )
 

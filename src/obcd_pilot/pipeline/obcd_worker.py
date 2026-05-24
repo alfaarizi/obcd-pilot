@@ -70,7 +70,7 @@ class OBCDWorker(QObject):
 
     def _run_inference(self, model: OBCDModel, frame: Frame) -> None:
         """Compare the frame with the previous one and emit a detection."""
-        curr_tensor = qimage_to_tensor(frame.image)
+        curr_tensor = qimage_to_tensor(frame.image).to(model.device)
 
         if self._prev_tensor is not None:
             start = time.perf_counter()
