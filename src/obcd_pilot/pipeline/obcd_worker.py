@@ -8,8 +8,13 @@ import torch
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from obcd_pilot.capture import Frame
-from obcd_pilot.pipeline._loader import OBCDModel, load_model, qimage_to_tensor
-from obcd_pilot.pipeline._types import Detection, ModelVariant
+from obcd_pilot.pipeline import (
+    Detection,
+    ModelVariant,
+    OBCDModel,
+    load_model,
+    qimage_to_tensor,
+)
 
 _CHANGE_THRESHOLD = 0.5
 

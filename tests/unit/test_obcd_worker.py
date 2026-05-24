@@ -10,8 +10,7 @@ from PySide6.QtGui import QImage
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot.capture import Frame
-from obcd_pilot.pipeline import Detection, ModelVariant
-from obcd_pilot.pipeline.obcd_worker import OBCDWorker
+from obcd_pilot.pipeline import Detection, ModelVariant, OBCDWorker
 
 _LOAD_MODEL = "obcd_pilot.pipeline.obcd_worker.load_model"
 

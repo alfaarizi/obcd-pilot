@@ -1,7 +1,8 @@
 """Obcdset frame-pair dataset.
 
-Layout: <root>/<scenario>/{A,B,label}/<id>.{jpg,jpg,png}. A is the "before"
-image, B is "after", label is a binary PNG mask (any non-zero pixel = change).
+Layout: A/<id>.jpg, B/<id>.jpg, label/<id>.png under <root>/<scenario>/.
+A is the "before" image, B is "after", label is a binary PNG mask (any
+non-zero pixel = change).
 
 Exposes a torch Dataset of (image1, image2, label) triples plus a
 deterministic train/val/test splitter that mirrors the notebook's selection

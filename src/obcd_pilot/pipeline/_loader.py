@@ -14,8 +14,7 @@ from PySide6.QtGui import QImage
 # Import YOLO from the submodule, as top-level import fails mypy strict mode.
 from ultralytics.models import YOLO
 
-from obcd_pilot.pipeline._obcd import ConvOBCDModel, TransOBCDModel
-from obcd_pilot.pipeline._types import ModelVariant
+from obcd_pilot.pipeline import ConvOBCDModel, ModelVariant, TransOBCDModel
 
 logger = logging.getLogger(__name__)
 

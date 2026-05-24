@@ -24,9 +24,9 @@ In development, launch the app from the repo root and the runtime worker picks u
 
 For installed builds, copy `obcd_{variant}.pth` into the per-user Qt `AppDataLocation`:
 
-- macOS: `~/Library/Application Support/obcd-pilot/weights`
-- Linux: `~/.local/share/obcd-pilot/weights`
-- Windows: `%APPDATA%\obcd-pilot\weights`
+- macOS: `~/Library/Application Support/OBCD/obcd-pilot/weights`
+- Linux: `~/.local/share/OBCD/obcd-pilot/weights`
+- Windows: `%APPDATA%\OBCD\obcd-pilot\weights`
 
 To point at any other folder explicitly, set `OBCD_WEIGHTS_DIR`.
 

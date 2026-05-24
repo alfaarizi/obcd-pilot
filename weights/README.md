@@ -6,9 +6,9 @@ In development, launch the desktop app from the repo root to load checkpoints fr
 
 For installed builds, copy the checkpoints into the per-user Qt `AppDataLocation`:
 
-- macOS: `~/Library/Application Support/obcd-pilot/weights`
-- Linux: `~/.local/share/obcd-pilot/weights`
-- Windows: `%APPDATA%\obcd-pilot\weights`
+- macOS: `~/Library/Application Support/OBCD/obcd-pilot/weights`
+- Linux: `~/.local/share/OBCD/obcd-pilot/weights`
+- Windows: `%APPDATA%\OBCD\obcd-pilot\weights`
 
 Set `OBCD_WEIGHTS_DIR` to point at any other folder.
 
