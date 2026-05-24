@@ -14,6 +14,10 @@ dist/
 .venv/
 venv/
 
+# Local env overrides (see .env.example for documented vars)
+.env
+.env.local
+
 # PyInstaller
 *.spec
 

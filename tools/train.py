@@ -32,9 +32,9 @@ from obcd_pilot.pipeline import (
     ModelVariant,
     OBCDModel,
     TransOBCDModel,
+    autodetect,
 )
 from tools import dataset as ds
-from tools.devices import autodetect
 from tools.loop import EpochReport, evaluate, train
 from tools.metrics import BinaryMetrics
 
@@ -300,6 +300,8 @@ def _train_one(args: argparse.Namespace, variant: ModelVariant) -> None:
     """Train one variant end-to-end and write checkpoint + report."""
     _seed_all(args.seed)
     device = _select_device(args.device)
+    logger.info("Training device: %s", device)
+
     train_loader, val_loader, test_loader = _build_dataloaders(args, variant, device)
     yolo = _build_yolo(args.yolo_weights, device)
     model = _build_model(variant, device, yolo)

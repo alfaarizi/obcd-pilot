@@ -1,6 +1,8 @@
 """Model construction, checkpoint loading, and frame preprocessing."""
 
 import logging
+import os
+from functools import cache
 from pathlib import Path
 from typing import NotRequired, TypedDict, cast
 
@@ -18,8 +20,18 @@ from obcd_pilot.pipeline._types import ModelVariant
 logger = logging.getLogger(__name__)
 
 _INPUT_SIZE = 256
-_DEVICE = torch.device("cpu")
-_YOLO_WEIGHTS = "yolov8n.pt"
+_YOLO_WEIGHTS = os.environ.get("OBCD_YOLO_WEIGHTS", "yolov8n.pt")
+
+
+@cache
+def autodetect() -> torch.device:
+    """Pick CUDA, then MPS, then CPU. Cached after first call."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
 
 OBCDModel = ConvOBCDModel | TransOBCDModel
 
@@ -37,6 +49,12 @@ def load_model(
     num_classes: int = 80,
 ) -> OBCDModel:
     """Build an OBCD model and load weights when a checkpoint is available."""
+    if not Path(_YOLO_WEIGHTS).exists():
+        logger.warning(
+            "YOLO weights %r not found on disk; ultralytics may attempt a "
+            "network download. Set OBCD_YOLO_WEIGHTS to a local path to avoid this.",
+            _YOLO_WEIGHTS,
+        )
     yolo = YOLO(_YOLO_WEIGHTS)
     feature_extractor = torch.nn.Sequential()
 
@@ -44,7 +62,7 @@ def load_model(
     if checkpoint_path is not None and checkpoint_path.exists():
         checkpoint = cast(
             _Checkpoint,
-            torch.load(checkpoint_path, map_location=_DEVICE, weights_only=True),
+            torch.load(checkpoint_path, map_location=autodetect(), weights_only=True),
         )
 
     model: OBCDModel
@@ -53,7 +71,7 @@ def load_model(
             feature_extractor=feature_extractor,
             yolo_model=yolo,
             num_classes=num_classes,
-            device=_DEVICE,
+            device=autodetect(),
         )
     else:
         max_objects = 10
@@ -63,7 +81,7 @@ def load_model(
             feature_extractor=feature_extractor,
             yolo_model=yolo,
             num_classes=num_classes,
-            device=_DEVICE,
+            device=autodetect(),
             max_objects=max_objects,
         )
 
