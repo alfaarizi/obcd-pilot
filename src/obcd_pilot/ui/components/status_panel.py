@@ -1,6 +1,6 @@
 """Status panel for object-based change detection."""
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -10,8 +10,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from obcd_pilot.pipeline import Detection
 from obcd_pilot.ui import icons_rc  # noqa: F401
 from obcd_pilot.ui.utils import separators
+
+_ICON_NO_CHANGE = QIcon(":/icons/circle-check-big.svg")
+_ICON_CHANGE = QIcon(":/icons/triangle-alert.svg")
+_ICON_SIZE = 24
 
 _ALARM_CHANNELS: list[str] = [
     "Pop-up",
@@ -38,129 +43,165 @@ class StatusPanel(QWidget):
 
     def __init__(self) -> None:
         super().__init__()
-
         self.setObjectName("status-panel")
         self.setFixedWidth(240)
 
-        root = QVBoxLayout()
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        root.addWidget(self._create_detection_status())
-        separator_1 = separators.create_h_separator()
-        separator_1.setObjectName("panel-separator")
-        root.addWidget(separator_1)
-
-        root.addWidget(self._create_alarm_status(), stretch=1)
-        separator_2 = separators.create_h_separator()
-        separator_2.setObjectName("panel-separator")
-        root.addWidget(separator_2)
-
-        root.addWidget(self._create_detection_details())
-
-        self.setLayout(root)
-
-    def _create_detection_status(self) -> QWidget:
-        """Create the large centered status indicator."""
-        detection_status = QWidget()
-
-        v_layout = QVBoxLayout()
-        v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v_layout.setContentsMargins(14, 16, 14, 16)
-        v_layout.setSpacing(6)
-
         self._status_icon = QLabel()
-        self._status_icon.setPixmap(QIcon(":/icons/shield-check.svg").pixmap(24, 24))
+        self._status_icon.setPixmap(_ICON_NO_CHANGE.pixmap(_ICON_SIZE, _ICON_SIZE))
         self._status_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status_icon.setFixedSize(48, 48)
-        v_layout.addWidget(self._status_icon, alignment=Qt.AlignmentFlag.AlignCenter)
 
         self._status_label = QLabel("No change")
         self._status_label.setObjectName("status-label")
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v_layout.addWidget(self._status_label)
 
         self._status_desc_label = QLabel("—")
         self._status_desc_label.setObjectName("status-desc-label")
         self._status_desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        v_layout.addWidget(self._status_desc_label)
-
-        detection_status.setLayout(v_layout)
-        return detection_status
-
-    def _create_alarm_status(self) -> QWidget:
-        """Create an alarm channel list with status indicators."""
-        alarm_status = QWidget()
-
-        v_layout = QVBoxLayout()
-        v_layout.setContentsMargins(14, 12, 14, 12)
-
-        v_layout.addWidget(_create_section_header("Alarms"))
-
-        grid_layout = QGridLayout()
-        grid_layout.setSpacing(4)
-
-        self._alarm_indicators: list[QLabel] = []
-        self._alarm_names: list[QLabel] = []
-        self._alarm_messages: list[QLabel] = []
-
-        for row_idx, name in enumerate(_ALARM_CHANNELS):
-            alarm_indicator = QLabel("●")
-            alarm_indicator.setObjectName("alarm-dot")
-            alarm_indicator.setFixedWidth(12)
-            grid_layout.addWidget(alarm_indicator, row_idx, 0)
-            self._alarm_indicators.append(alarm_indicator)
-
-            alarm_name = QLabel(name)
-            alarm_name.setObjectName("alarm-name")
-            grid_layout.addWidget(alarm_name, row_idx, 1)
-            self._alarm_names.append(alarm_name)
-
-            alarm_message = QLabel("Sent")
-            alarm_message.setObjectName("alarm-status")
-            alarm_message.setAlignment(Qt.AlignmentFlag.AlignRight)
-            grid_layout.addWidget(alarm_message, row_idx, 2)
-            self._alarm_messages.append(alarm_message)
-
-        v_layout.addLayout(grid_layout)
-        v_layout.addStretch(1)
-        alarm_status.setLayout(v_layout)
-        return alarm_status
-
-    def _create_detection_details(self) -> QWidget:
-        """Create the detection pipeline information."""
-        detection_details = QWidget()
-
-        v_layout = QVBoxLayout()
-        v_layout.setContentsMargins(14, 12, 14, 12)
-
-        v_layout.addWidget(_create_section_header("Details"))
-
-        form_layout = QFormLayout()
-        form_layout.setSpacing(6)
-        form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
-        form_layout.setFieldGrowthPolicy(
-            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
-        )
 
         self._model = QLabel("—")
         self._inference = QLabel("—")
         self._confidence = QLabel("—")
-        self._ram = QLabel("—")
 
+        self._alarm_indicators: list[QLabel] = []
+        self._alarm_names: list[QLabel] = []
+        self._alarm_messages: list[QLabel] = []
+        for name in _ALARM_CHANNELS:
+            indicator = QLabel("●")
+            indicator.setObjectName("alarm-dot")
+            indicator.setFixedWidth(12)
+            self._alarm_indicators.append(indicator)
+
+            name_label = QLabel(name)
+            name_label.setObjectName("alarm-name")
+            self._alarm_names.append(name_label)
+
+            message = QLabel("Sent")
+            message.setObjectName("alarm-status")
+            message.setAlignment(Qt.AlignmentFlag.AlignRight)
+            self._alarm_messages.append(message)
+
+        separator_1 = separators.create_h_separator()
+        separator_1.setObjectName("panel-separator")
+        separator_2 = separators.create_h_separator()
+        separator_2.setObjectName("panel-separator")
+
+        root = QVBoxLayout()
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self._create_detection_status())
+        root.addWidget(separator_1)
+        root.addWidget(self._create_alarm_status(), stretch=1)
+        root.addWidget(separator_2)
+        root.addWidget(self._create_detection_details())
+        self.setLayout(root)
+
+    @Slot(str)
+    def set_model_status(self, name: str) -> None:
+        """Show the active model's name in the details section."""
+        self._model.setText(name)
+
+    @Slot(Detection)
+    def update_detection(self, detection: Detection) -> None:
+        """Render the latest detection result from the pipeline."""
+        changed = detection.change_detected
+        icon = _ICON_CHANGE if changed else _ICON_NO_CHANGE
+        self._status_icon.setPixmap(icon.pixmap(_ICON_SIZE, _ICON_SIZE))
+        self._status_label.setText("Change detected" if changed else "No change")
+        self._status_desc_label.setText(f"Frame {detection.frame_id}")
+        self._confidence.setText(f"{detection.confidence:.2f}")
+        self._inference.setText(f"{detection.inference_ms:.0f} ms")
+        self._set_changed(changed)
+
+    @Slot()
+    def reset_detection(self) -> None:
+        """Restore the idle state when the pipeline is torn down with the source."""
+        self._status_icon.setPixmap(_ICON_NO_CHANGE.pixmap(_ICON_SIZE, _ICON_SIZE))
+        self._status_label.setText("No change")
+        self._status_desc_label.setText("—")
+        self._model.setText("—")
+        self._inference.setText("—")
+        self._confidence.setText("—")
+        self._set_changed(False)
+
+    def _set_changed(self, changed: bool) -> None:
+        """Toggle the changed style property so the QSS can recolour."""
+        for widget in (
+            self._detection_status,
+            self._status_label,
+            self._status_desc_label,
+        ):
+            widget.setProperty("changed", changed)
+            style = widget.style()
+            style.unpolish(widget)
+            style.polish(widget)
+
+    def _create_detection_status(self) -> QWidget:
+        """Assemble the centred status indicator section."""
+        self._detection_status = QWidget()
+        self._detection_status.setObjectName("detection-status")
+        self._detection_status.setAttribute(
+            Qt.WidgetAttribute.WA_StyledBackground, True
+        )
+
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setContentsMargins(14, 16, 14, 16)
+        layout.setSpacing(6)
+        layout.addWidget(self._status_icon, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self._status_label)
+        layout.addWidget(self._status_desc_label)
+
+        self._detection_status.setLayout(layout)
+        return self._detection_status
+
+    def _create_alarm_status(self) -> QWidget:
+        """Assemble the alarm channel grid section."""
+        grid = QGridLayout()
+        grid.setSpacing(4)
+        rows = zip(
+            self._alarm_indicators,
+            self._alarm_names,
+            self._alarm_messages,
+            strict=True,
+        )
+        for row_idx, (indicator, name, message) in enumerate(rows):
+            grid.addWidget(indicator, row_idx, 0)
+            grid.addWidget(name, row_idx, 1)
+            grid.addWidget(message, row_idx, 2)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.addWidget(_create_section_header("Alarms"))
+        layout.addLayout(grid)
+        layout.addStretch(1)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def _create_detection_details(self) -> QWidget:
+        """Assemble the details form section."""
+        form = QFormLayout()
+        form.setSpacing(6)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         for field_name, value_label in (
             ("Model", self._model),
             ("Inference", self._inference),
             ("Confidence", self._confidence),
-            ("RAM", self._ram),
         ):
             label = QLabel(field_name)
             label.setObjectName("detail-label")
             value_label.setObjectName("detail-value")
             value_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-            form_layout.addRow(label, value_label)
+            form.addRow(label, value_label)
 
-        v_layout.addLayout(form_layout)
-        detection_details.setLayout(v_layout)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.addWidget(_create_section_header("Details"))
+        layout.addLayout(form)
 
-        return detection_details
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget

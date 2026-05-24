@@ -3,7 +3,7 @@
 import pytest
 from pytestqt.qtbot import QtBot
 
-from obcd_pilot.capture._types import Playback
+from obcd_pilot.capture import Playback
 from obcd_pilot.ui.components.playback_overlay import PlaybackOverlay
 
 

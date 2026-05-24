@@ -3,7 +3,7 @@
 import pytest
 from PySide6.QtGui import QImage
 
-from obcd_pilot.capture._types import CameraInfo, Frame, Playback
+from obcd_pilot.capture import CameraInfo, Frame, Playback
 
 
 @pytest.fixture()

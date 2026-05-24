@@ -12,7 +12,7 @@
  */
 
 * {
-    font-family: -apple-system, "Segoe UI", "SF Pro Text", sans-serif;
+    font-family: "Helvetica Neue", "Segoe UI", sans-serif;
     font-size: 12px;
     color: #f5f5f5;
 }
@@ -73,7 +73,7 @@ QLabel#service-label {
 }
 
 QLabel#version-label {
-    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-family: "Menlo", "Consolas", monospace;
     font-size: 11px;
     color: rgba(245, 245, 245, 0.30);
     padding: 0 14px;
@@ -99,15 +99,33 @@ QLabel#section-header {
     color: rgba(245, 245, 245, 0.36);
 }
 
+QWidget#detection-status {
+    background: transparent;
+    border-left: 3px solid transparent;
+}
+
+QWidget#detection-status[changed="true"] {
+    background: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid #ef4444;
+}
+
 QLabel#status-label {
     font-size: 14px;
     font-weight: 600;
     color: #f5f5f5;
 }
 
+QLabel#status-label[changed="true"] {
+    color: #ef4444;
+}
+
 QLabel#status-desc-label {
     font-size: 11px;
     color: rgba(245, 245, 245, 0.48);
+}
+
+QLabel#status-desc-label[changed="true"] {
+    color: rgba(239, 68, 68, 0.78);
 }
 
 QLabel#alarm-dot {
@@ -131,7 +149,7 @@ QLabel#detail-label {
 }
 
 QLabel#detail-value {
-    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-family: "Menlo", "Consolas", monospace;
     font-size: 11px;
     color: rgba(245, 245, 245, 0.78);
 }
@@ -276,7 +294,7 @@ QSlider#playback-slider::handle:horizontal {
 }
 
 QLabel#playback-time-label {
-    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-family: "Menlo", "Consolas", monospace;
     font-size: 11px;
     color: rgba(245, 245, 245, 0.65);
 }

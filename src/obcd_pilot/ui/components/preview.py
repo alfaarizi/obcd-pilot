@@ -4,9 +4,19 @@ Displays camera frames.
 """
 
 import logging
+import os
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QSize, Qt
+from PySide6.QtCore import (
+    QEvent,
+    QObject,
+    QPoint,
+    QSize,
+    QStandardPaths,
+    Qt,
+    QThread,
+    Signal,
+)
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -35,6 +45,7 @@ from obcd_pilot.capture import (
     VideoWorker,
     retrieve_cameras,
 )
+from obcd_pilot.pipeline import Detection, ModelVariant, OBCDWorker
 from obcd_pilot.ui import icons_rc  # noqa: F401
 from obcd_pilot.ui.components.playback_overlay import PlaybackOverlay
 
@@ -46,11 +57,37 @@ _ICON_FILE_X = QIcon(":/icons/file-x.svg")
 
 _VIDEO_FILTER = "Video Files (*.mp4)"
 
+_MODEL_VARIANT: ModelVariant = "conv"
+
 logger = logging.getLogger(__name__)
+
+
+def _weights_dir() -> Path:
+    """Checkpoint dir: OBCD_WEIGHTS_DIR, else <cwd>/weights, else Qt AppDataLocation."""
+    override = os.environ.get("OBCD_WEIGHTS_DIR")
+    if override:
+        return Path(override)
+    cwd_weights = Path.cwd() / "weights"
+    if cwd_weights.is_dir():
+        return cwd_weights
+    base = QStandardPaths.writableLocation(
+        QStandardPaths.StandardLocation.AppDataLocation
+    )
+    return Path(base) / "weights"
+
+
+def _checkpoint_path(variant: ModelVariant) -> Path | None:
+    """Return the checkpoint for variant if one is present on disk."""
+    path = _weights_dir() / f"obcd_{variant}.pth"
+    return path if path.exists() else None
 
 
 class Preview(QWidget):
     """Camera feed canvas with Zoom-style control bar."""
+
+    sig_detection = Signal(Detection)
+    sig_model_ready = Signal(str)
+    sig_pipeline_reset = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -62,6 +99,9 @@ class Preview(QWidget):
 
         self._video_worker: VideoWorker | None = None
         self._resume_after_seek = False
+
+        self._obcd_worker: OBCDWorker | None = None
+        self._obcd_thread: QThread | None = None
 
         # Widgets
         self._canvas = _Canvas()
@@ -174,8 +214,12 @@ class Preview(QWidget):
         self._close_video()
         self._canvas_message.hide_message()
 
+        self._start_pipeline()
+
         worker = CameraWorker(camera.index)
         worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
+        if self._obcd_worker is not None:
+            worker.sig_frame.connect(self._obcd_worker.push_frame)
         worker.sig_error_occurred.connect(self._on_camera_error)
         worker.start()
 
@@ -191,6 +235,7 @@ class Preview(QWidget):
         self._camera_worker.wait()
         self._camera_worker = None
         self._camera_button.setIcon(_ICON_VIDEO_OFF)
+        self._stop_pipeline()
 
     def _load_video(self, path: Path) -> None:
         """Stop any active camera, then start a VideoWorker for path."""
@@ -198,8 +243,12 @@ class Preview(QWidget):
         self._close_video()
         self._canvas_message.hide_message()
 
+        self._start_pipeline()
+
         worker = VideoWorker(path)
         worker.sig_frame.connect(lambda frame: self._canvas.set(frame.image))
+        if self._obcd_worker is not None:
+            worker.sig_frame.connect(self._obcd_worker.push_frame)
         worker.sig_playback.connect(self._playback_overlay.update_position)
         worker.sig_error_occurred.connect(self._on_video_error)
         worker.sig_end_of_file.connect(self._on_video_ended)
@@ -220,6 +269,39 @@ class Preview(QWidget):
         self._video_worker = None
         self._playback_overlay.reset()
         self._playback_overlay.setVisible(False)
+        self._stop_pipeline()
+
+    def _start_pipeline(self) -> None:
+        """Run an OBCD worker on a dedicated thread for the active source."""
+        self._stop_pipeline()
+
+        obcd_worker = OBCDWorker(
+            variant=_MODEL_VARIANT,
+            checkpoint_path=_checkpoint_path(_MODEL_VARIANT),
+        )
+        obcd_thread = QThread(self)
+        obcd_worker.moveToThread(obcd_thread)
+        obcd_worker.sig_detection.connect(self.sig_detection)
+        obcd_worker.sig_model_ready.connect(self.sig_model_ready)
+        obcd_thread.started.connect(obcd_worker.start_model)
+        # Reclaim both after quit() per https://doc.qt.io/qt-6/qthread.html
+        obcd_thread.finished.connect(obcd_worker.deleteLater)
+        obcd_thread.finished.connect(obcd_thread.deleteLater)
+        obcd_thread.start()
+
+        self._obcd_worker = obcd_worker
+        self._obcd_thread = obcd_thread
+
+    def _stop_pipeline(self) -> None:
+        """Stop the pipeline thread and reset downstream detection state."""
+        if self._obcd_thread is None:
+            return
+
+        self._obcd_thread.quit()
+        self._obcd_thread.wait()
+        self._obcd_worker = None
+        self._obcd_thread = None
+        self.sig_pipeline_reset.emit()
 
     def _on_camera_selected(self, action: QAction) -> None:
         """Switch to the camera chosen from the dropdown."""

@@ -4,6 +4,7 @@ import pytest
 from PySide6.QtWidgets import QLabel
 from pytestqt.qtbot import QtBot
 
+from obcd_pilot.pipeline import Detection
 from obcd_pilot.ui.components.status_panel import (
     _ALARM_CHANNELS,
     StatusPanel,
@@ -17,6 +18,18 @@ def panel(qtbot: QtBot) -> StatusPanel:
     widget = StatusPanel()
     qtbot.addWidget(widget)
     return widget
+
+
+def _detection(*, change_detected: bool, frame_id: int = 7) -> Detection:
+    """Build a Detection for StatusPanel update tests."""
+    return Detection(
+        frame_id=frame_id,
+        timestamp_ms=1.0,
+        change_detected=change_detected,
+        confidence=0.91 if change_detected else 0.10,
+        inference_ms=120.0,
+        model_name="ConvOBCD",
+    )
 
 
 class TestStatusPanelConstruction:
@@ -90,10 +103,6 @@ class TestDetectionDetailsSection:
         """Confidence field starts as '—' (no confidence reported)."""
         assert panel._confidence.text() == "—"
 
-    def test_ram_label_default_text(self, panel: StatusPanel) -> None:
-        """RAM field starts as '—' (no usage data)."""
-        assert panel._ram.text() == "—"
-
 
 class TestCreateSectionHeader:
     """Tests for the _create_section_header factory function."""
@@ -112,3 +121,57 @@ class TestCreateSectionHeader:
         """The returned label uses 'section-header' as its object name."""
         label = _create_section_header("Alarms")
         assert label.objectName() == "section-header"
+
+
+class TestUpdateDetection:
+    """Tests for StatusPanel.update_detection."""
+
+    @pytest.mark.parametrize(
+        "change_detected,expected_label",
+        [(True, "Change detected"), (False, "No change")],
+    )
+    def test_renders_detection(
+        self,
+        panel: StatusPanel,
+        change_detected: bool,
+        expected_label: str,
+    ) -> None:
+        """update_detection writes every detection-driven field on the panel."""
+        detection = _detection(change_detected=change_detected, frame_id=5)
+        panel.update_detection(detection)
+        assert panel._status_label.text() == expected_label
+        assert panel._status_desc_label.text() == "Frame 5"
+        assert panel._confidence.text() == f"{detection.confidence:.2f}"
+        assert panel._inference.text() == "120 ms"
+        assert panel._status_label.property("changed") is change_detected
+
+    def test_clears_changed_flag_when_state_drops(self, panel: StatusPanel) -> None:
+        """A no-change detection clears the changed style left by a prior change."""
+        panel.update_detection(_detection(change_detected=True))
+        panel.update_detection(_detection(change_detected=False))
+        assert panel._status_label.property("changed") is False
+
+
+class TestSetModelStatus:
+    """Tests for StatusPanel.set_model_status."""
+
+    def test_sets_model_field(self, panel: StatusPanel) -> None:
+        """set_model_status writes the given name into the model field."""
+        panel.set_model_status("ConvOBCD · untrained")
+        assert panel._model.text() == "ConvOBCD · untrained"
+
+
+class TestResetDetection:
+    """Tests for StatusPanel.reset_detection."""
+
+    def test_restores_idle_state(self, panel: StatusPanel) -> None:
+        """reset_detection returns every detection field to its placeholder."""
+        panel.set_model_status("ConvOBCD")
+        panel.update_detection(_detection(change_detected=True))
+        panel.reset_detection()
+        assert panel._status_label.text() == "No change"
+        assert panel._status_desc_label.text() == "—"
+        assert panel._model.text() == "—"
+        assert panel._inference.text() == "—"
+        assert panel._confidence.text() == "—"
+        assert panel._status_label.property("changed") is False

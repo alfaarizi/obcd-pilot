@@ -14,8 +14,13 @@ dist/
 .venv/
 venv/
 
+# Local env overrides (see .env.example for documented vars)
+.env
+.env.local
+
 # PyInstaller
 *.spec
+!obcd-pilot.spec
 
 # IDE
 .idea/
@@ -41,3 +46,12 @@ htmlcov/
 # Runtime
 logs/
 *.log
+
+# Datasets, models, and training artifacts
+datasets/
+*.pt
+*.pth
+runs/
+weights/*
+!weights/README.md
+

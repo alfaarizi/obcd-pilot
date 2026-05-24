@@ -16,7 +16,7 @@ class Frame(NamedTuple):
 
 
 class Playback(NamedTuple):
-    """Playback emitted by ``VideoWorker``."""
+    """Playback emitted by VideoWorker."""
 
     position_ms: float
     duration_ms: float
@@ -30,7 +30,7 @@ class CameraInfo:
 
     Attributes:
         name: Human-readable label shown in the UI.
-        index: OpenCV device index passed to ``cv2.VideoCapture``.
+        index: OpenCV device index passed to cv2.VideoCapture.
     """
 
     name: str
