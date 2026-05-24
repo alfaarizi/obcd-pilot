@@ -16,7 +16,7 @@ Outputs land in `weights/`:
 | `obcd_conv.pth`, `obcd_trans.pth` | Checkpoints picked by best validation F1. |
 | `obcd_{variant}.report.json` | Per-epoch and test metrics. |
 
-All files in `weights/` are gitignored.
+All checkpoint artifacts in `weights/` are gitignored.
 
 ## Deploying checkpoints to the desktop app
 

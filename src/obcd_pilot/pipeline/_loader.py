@@ -123,7 +123,18 @@ def load_model(
     model.set_eval()
     if variant == "conv":
         cast(ConvOBCDModel, model).temporal_fc.eval()
+    _warmup_model(model, device)
     return model
+
+
+def _warmup_model(model: OBCDModel, device: torch.device) -> None:
+    """Trigger kernel compilation with one dummy forward pass."""
+    dummy = torch.rand(1, 3, _INPUT_SIZE, _INPUT_SIZE, device=device)
+    try:
+        with torch.inference_mode():
+            model(dummy, dummy)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Model warmup failed: %s. First inference may be slower.", exc)
 
 
 def qimage_to_tensor(image: QImage) -> torch.Tensor:

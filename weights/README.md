@@ -1,6 +1,6 @@
 # Weights
 
-OBCD checkpoints. Files in this directory are gitignored.
+OBCD checkpoints. Checkpoint artifacts are gitignored, but this README is tracked.
 
 In development, launch the desktop app from the repo root to load checkpoints from this folder.
 

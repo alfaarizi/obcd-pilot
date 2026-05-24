@@ -32,9 +32,11 @@ def _confusion(preds: torch.Tensor, labels: torch.Tensor) -> tuple[int, int, int
 def compute_metrics(preds: torch.Tensor, labels: torch.Tensor) -> BinaryMetrics:
     """Accuracy, precision, recall, and F1 from binarised predictions.
 
-    Follows sklearn's zero_division=1 convention. When a denominator is zero
-    the metric scores 1.0, so a model that was never asked to predict a
-    positive (or a split with no positives) is not penalised.
+    Accuracy, precision, and recall follow sklearn's zero_division=1
+    convention: a zero denominator scores 1.0, so a model that was never
+    asked to predict a positive (or a split with no positives) is not
+    penalised. F1 stays 0.0 when precision and recall are both zero, since
+    that means predictions were made but all wrong.
     """
     tp, fp, fn, tn = _confusion(preds, labels)
     total = tp + fp + fn + tn
