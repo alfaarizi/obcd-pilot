@@ -17,8 +17,8 @@ from obcd_pilot.ui import icons_rc  # noqa: F401
 from obcd_pilot.ui.logs_view import LogsView
 from obcd_pilot.ui.monitor_view import MonitorView
 
-ICON_MONITOR = QIcon(":/icons/monitor.svg")
-ICON_FILE_TEXT = QIcon(":/icons/file-text.svg")
+_ICON_MONITOR = QIcon(":/icons/monitor.svg")
+_ICON_FILE_TEXT = QIcon(":/icons/file-text.svg")
 
 
 class MainWindow(QMainWindow):
@@ -62,8 +62,8 @@ class MainWindow(QMainWindow):
 
         for index, (icon, label) in enumerate(
             (
-                (ICON_MONITOR, "Monitor"),
-                (ICON_FILE_TEXT, "Logs"),
+                (_ICON_MONITOR, "Monitor"),
+                (_ICON_FILE_TEXT, "Logs"),
             )
         ):
             action = QAction(icon, label, self)
