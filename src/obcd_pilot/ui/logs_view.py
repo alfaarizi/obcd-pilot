@@ -24,6 +24,7 @@ from PySide6.QtCore import (
     QSize,
     QSortFilterProxyModel,
     Qt,
+    QTimer,
     Slot,
 )
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QShowEvent
@@ -130,9 +131,11 @@ class _LogModel(QAbstractListModel):
         Returns the entry under the custom role, or a plain text fallback so
         accessibility tools can read the row.
         """
-        if not index.isValid():
+        row = index.row()
+        # Bound check because QAbstractListModel.index() does not validate.
+        if not index.isValid() or not 0 <= row < len(self._entries):
             return None
-        entry = self._entries[index.row()]
+        entry = self._entries[row]
         if role == self.EntryRole:
             return entry
         if role == Qt.ItemDataRole.DisplayRole:
@@ -347,7 +350,7 @@ class LogsView(QWidget):
         self.setLayout(root)
 
         self._category_combo.currentIndexChanged.connect(self._on_category_changed)
-        self._search_input.textChanged.connect(self._proxy.set_needle)
+        self._search_input.textChanged.connect(self._on_search_changed)
         self._refresh_btn.clicked.connect(self._reload_from_file)
         self._export_btn.clicked.connect(self._on_export_clicked)
         for signal in (
@@ -367,16 +370,7 @@ class LogsView(QWidget):
         Anchor to the latest entry every time the view becomes visible.
         """
         super().showEvent(event)
-        self._view.scrollToBottom()
-
-    @Slot(logging.LogRecord)
-    def _on_record(self, record: logging.LogRecord) -> None:
-        """Append a live record and follow the tail when the user is at bottom."""
-        # Sample before append so a user reading history is not pulled to the bottom.
-        at_bottom = self._is_at_bottom()
-        self._source_model.append(_LogEntry.from_record(record))
-        if at_bottom:
-            self._view.scrollToBottom()
+        self._anchor_to_tail()
 
     @Slot()
     def _reload_from_file(self) -> None:
@@ -389,12 +383,16 @@ class LogsView(QWidget):
             return
         entries = [e for line in lines if (e := _parse_line(line.strip())) is not None]
         self._source_model.replace(entries)
-        self._view.scrollToBottom()
+        self._anchor_to_tail()
 
-    def _is_at_bottom(self) -> bool:
-        """Return True when the vertical scrollbar is parked at the bottom."""
-        bar = self._view.verticalScrollBar()
-        return bar.value() >= bar.maximum() - 4
+    @Slot(logging.LogRecord)
+    def _on_record(self, record: logging.LogRecord) -> None:
+        """Append a live record and follow the tail when the user is at bottom."""
+        # Sample before append so a user reading history is not pulled to the bottom.
+        at_bottom = self._is_at_tail()
+        self._source_model.append(_LogEntry.from_record(record))
+        if at_bottom:
+            self._anchor_to_tail()
 
     @Slot(int)
     def _on_category_changed(self, index: int) -> None:
@@ -402,6 +400,13 @@ class LogsView(QWidget):
         value = self._category_combo.itemData(index)
         if isinstance(value, str):
             self._proxy.set_category(value)
+            self._anchor_to_tail()
+
+    @Slot(str)
+    def _on_search_changed(self, text: str) -> None:
+        """Apply the search needle and anchor to the latest matching row."""
+        self._proxy.set_needle(text)
+        self._anchor_to_tail()
 
     @Slot()
     def _on_export_clicked(self) -> None:
@@ -428,7 +433,6 @@ class LogsView(QWidget):
         ]
         return "\n".join(lines) + ("\n" if lines else "")
 
-    @Slot()
     def _update_count_label(self, *_: object) -> None:
         """Refresh the status bar count to reflect the proxy row count."""
         shown = self._proxy.rowCount()
@@ -439,6 +443,15 @@ class LogsView(QWidget):
             else f"Showing {shown} of {total} entries"
         )
         self._count_label.setText(text)
+
+    def _is_at_tail(self) -> bool:
+        """Return True when the vertical scrollbar is parked at tail."""
+        bar = self._view.verticalScrollBar()
+        return bar.value() >= bar.maximum() - 4
+
+    def _anchor_to_tail(self) -> None:
+        """Scroll to the bottom on the next event loop tick."""
+        QTimer.singleShot(0, self._view, self._view.scrollToBottom)
 
     def _create_toolbar(self) -> QWidget:
         """Build the top toolbar holding filter, search, refresh, and export."""

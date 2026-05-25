@@ -60,6 +60,10 @@ QToolBar#nav-sidebar QToolButton:checked {
     background: rgba(255, 255, 255, 0.12);
 }
 
+QToolBar#nav-sidebar QToolButton:checked:focus {
+    background: rgba(14, 114, 237, 0.32);
+}
+
 QToolBar#nav-sidebar QToolButton:pressed {
     background: rgba(255, 255, 255, 0.18);
 }
