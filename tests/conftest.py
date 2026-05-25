@@ -39,7 +39,7 @@ def make_detection() -> Callable[..., Detection]:
 
 
 @pytest.fixture(autouse=True)
-def app_log_isolated(qapp: object, tmp_path: Path) -> None:
+def app_log_isolated(tmp_path: Path) -> None:
     """Reset and reconfigure the app logger per test with a tmp file."""
     from obcd_pilot import app_log
 

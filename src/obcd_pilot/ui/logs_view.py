@@ -381,7 +381,9 @@ class LogsView(QWidget):
         except FileNotFoundError:
             self._source_model.replace([])
             return
-        entries = [e for line in lines if (e := _parse_line(line.strip())) is not None]
+        entries = [
+            e for line in lines if (e := _parse_line(line.rstrip("\n"))) is not None
+        ]
         self._source_model.replace(entries)
         self._anchor_to_tail()
 
