@@ -45,6 +45,7 @@ QToolBar#nav-sidebar QToolButton {
     background: transparent;
     margin: 2px 12px;
     padding: 0;
+    outline: none;
 }
 
 QToolBar#nav-sidebar QToolButton:hover {
@@ -188,15 +189,16 @@ QToolButton#open-file-button:pressed {
 QToolButton#camera-button::menu-button {
     subcontrol-position: top right;
     subcontrol-origin: border;
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border: none;
     background: transparent;
 }
 
 QToolButton#camera-button::menu-arrow {
-    width: 10px;
-    height: 10px;
+    image: url(:/icons/chevron-down.svg);
+    width: 14px;
+    height: 14px;
 }
 
 QMenu#camera-menu {
@@ -297,4 +299,104 @@ QLabel#playback-time-label {
     font-family: "Menlo", "Consolas", monospace;
     font-size: 11px;
     color: rgba(245, 245, 245, 0.65);
+}
+
+/* Logs View. Toolbar above, mono log rows, status bar below. */
+
+QWidget#logs-view {
+    background: #1e1e1e;
+}
+
+QWidget#logs-toolbar {
+    background: #252525;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+QWidget#logs-statusbar {
+    background: #252525;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+QListView#logs-list {
+    background: #1e1e1e;
+    border: none;
+    outline: 0;
+    selection-background-color: rgba(14, 114, 237, 0.18);
+}
+
+QComboBox#logs-category {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding: 5px 28px 5px 10px;
+    min-width: 140px;
+}
+
+QComboBox#logs-category:hover {
+    background: #232323;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+QComboBox#logs-category::drop-down {
+    width: 22px;
+    border: none;
+}
+
+QComboBox#logs-category::down-arrow {
+    image: url(:/icons/chevron-down.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox#logs-category QAbstractItemView {
+    background: #2a2a2a;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    selection-background-color: rgba(255, 255, 255, 0.08);
+    padding: 4px 0;
+    outline: 0;
+}
+
+QLineEdit#logs-search {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding: 5px 10px;
+    selection-background-color: rgba(14, 114, 237, 0.35);
+}
+
+QLineEdit#logs-search:focus {
+    border-color: rgba(14, 114, 237, 0.55);
+}
+
+QPushButton#logs-tool-button {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding: 5px 14px;
+    outline: none;
+}
+
+QPushButton#logs-tool-button:hover {
+    background: #232323;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+QPushButton#logs-tool-button:pressed {
+    background: rgba(255, 255, 255, 0.10);
+}
+
+QLabel#logs-count {
+    font-size: 11px;
+    color: rgba(245, 245, 245, 0.55);
+}
+
+QLabel#logs-path {
+    font-family: "Menlo", "Consolas", monospace;
+    font-size: 11px;
+    color: rgba(245, 245, 245, 0.45);
+}
+
+QFrame#logs-separator {
+    background: rgba(255, 255, 255, 0.10);
+    margin: 6px 0;
 }

@@ -9,8 +9,6 @@ Detection events route through log_detection at WARNING level so they surface
 as alerts in the viewer.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 from logging.handlers import RotatingFileHandler

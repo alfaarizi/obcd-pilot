@@ -14,7 +14,11 @@ from PySide6.QtWidgets import (
 
 from obcd_pilot import __version__
 from obcd_pilot.ui import icons_rc  # noqa: F401
+from obcd_pilot.ui.logs_view import LogsView
 from obcd_pilot.ui.monitor_view import MonitorView
+
+ICON_MONITOR = QIcon(":/icons/monitor.svg")
+ICON_FILE_TEXT = QIcon(":/icons/file-text.svg")
 
 
 class MainWindow(QMainWindow):
@@ -28,6 +32,7 @@ class MainWindow(QMainWindow):
 
         self._stack = QStackedWidget()
         self._stack.addWidget(MonitorView())
+        self._stack.addWidget(LogsView())
         self._nav_sidebar: QToolBar = self._create_nav_sidebar()
         self._status_bar: QWidget = self._create_service_bar()
 
@@ -55,14 +60,21 @@ class MainWindow(QMainWindow):
         nav_group = QActionGroup(self)
         nav_group.setExclusive(True)
 
-        action = QAction(QIcon(":/icons/monitor.svg"), "Monitor", self)
-        action.setCheckable(True)
-        action.setChecked(True)
-        action.setToolTip("Monitor")
-        action.triggered.connect(lambda: self._stack.setCurrentIndex(0))
-
-        nav_group.addAction(action)
-        nav_sidebar.addAction(action)
+        for index, (icon, label) in enumerate(
+            (
+                (ICON_MONITOR, "Monitor"),
+                (ICON_FILE_TEXT, "Logs"),
+            )
+        ):
+            action = QAction(icon, label, self)
+            action.setCheckable(True)
+            action.setChecked(index == 0)
+            action.setToolTip(label)
+            action.triggered.connect(
+                lambda _checked=False, i=index: self._stack.setCurrentIndex(i)
+            )
+            nav_group.addAction(action)
+            nav_sidebar.addAction(action)
 
         return nav_sidebar
 
