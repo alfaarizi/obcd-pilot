@@ -203,6 +203,23 @@ class _LogProxy(QSortFilterProxyModel):
                 return False
         return True
 
+    def lessThan(
+        self,
+        left: QModelIndex | QPersistentModelIndex,
+        right: QModelIndex | QPersistentModelIndex,
+    ) -> bool:
+        """Overloaded Qt method.
+
+        Order rows by ISO timestamp ascending. Python's logging uses a per
+        handler lock, so cross thread emissions can reach the Qt signal handler
+        in a different order than the file handler.
+        """
+        left_entry = left.data(_LogModel.EntryRole)
+        right_entry = right.data(_LogModel.EntryRole)
+        if isinstance(left_entry, _LogEntry) and isinstance(right_entry, _LogEntry):
+            return left_entry.timestamp < right_entry.timestamp
+        return False
+
 
 class _LogDelegate(QStyledItemDelegate):
     """Paints a row as dim timestamp, colored level, message."""
@@ -298,6 +315,8 @@ class LogsView(QWidget):
         self._source_model = _LogModel(self)
         self._proxy = _LogProxy(self)
         self._proxy.setSourceModel(self._source_model)
+        # Sort by ISO timestamp so live tail and refresh display the same order
+        self._proxy.sort(0, Qt.SortOrder.AscendingOrder)
 
         self._view = QListView()
         self._view.setObjectName("logs-list")
