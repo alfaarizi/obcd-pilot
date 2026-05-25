@@ -108,7 +108,7 @@ class TestLogDetection:
         assert app_log.DETECTION_LOGGER_NAME in line
         assert "frame 142" in line
         assert "confidence=0.87" in line
-        assert "ConvOBCD" in line
+        assert "model=ConvOBCD" in line
         assert line[:4].isdigit() and line[4] == "-"
 
 

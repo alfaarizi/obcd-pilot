@@ -14,7 +14,7 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QStandardPaths, Signal
 
 from obcd_pilot.pipeline import Detection
 
@@ -70,13 +70,21 @@ def current_log_path() -> Path:
 
 
 def resolve_log_path(override: Path | None = None) -> Path:
-    """Pick a log path. Priority: argument, OBCD_LOG_PATH env, default."""
+    """Pick a log path. Priority: argument, OBCD_LOG_PATH env, then cwd if
+    writable (dev mode), then the platform's AppDataLocation (bundled mode).
+    """
     if override is not None:
         return override.expanduser().resolve()
     env = os.environ.get(ENV_LOG_PATH)
     if env:
         return Path(env).expanduser().resolve()
-    return (Path.cwd() / DEFAULT_LOG_PATH).resolve()
+    cwd = Path.cwd()
+    if os.access(cwd, os.W_OK):
+        return (cwd / DEFAULT_LOG_PATH).resolve()
+    base = Path(
+        QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
+    )
+    return (base / DEFAULT_LOG_PATH).resolve()
 
 
 def configure(
@@ -90,6 +98,7 @@ def configure(
 
     path = resolve_log_path(log_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(exist_ok=True)
     _active_path = path
 
     logger = logging.getLogger(ROOT_LOGGER_NAME)
@@ -101,10 +110,18 @@ def configure(
     if _bridge is None:
         _bridge = _QtLogBridge()
 
-    if not any(
-        isinstance(h, RotatingFileHandler) and Path(h.baseFilename) == path
-        for h in logger.handlers
-    ):
+    # Drop any stale file handler pointing at a different path so reconfigure
+    # to a new location does not duplicate writes across files.
+    has_matching_file_handler = False
+    for handler in list(logger.handlers):
+        if isinstance(handler, RotatingFileHandler):
+            if Path(handler.baseFilename) == path:
+                has_matching_file_handler = True
+            else:
+                logger.removeHandler(handler)
+                handler.close()
+
+    if not has_matching_file_handler:
         file_handler = RotatingFileHandler(
             path,
             maxBytes=_MAX_BYTES,

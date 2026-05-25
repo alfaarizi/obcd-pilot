@@ -216,7 +216,7 @@ class TestParseLine:
             "Change detected in frame 142"
         )
         assert entry is not None
-        assert entry.timestamp == "14:32:07"
+        assert entry.timestamp == "2026-05-24T14:32:07.123"
         assert entry.level == "ERROR"
         assert entry.logger_name == "obcd_pilot.detection"
         assert "Change detected" in entry.message
@@ -234,7 +234,7 @@ class TestDelegate:
         model = _LogModel()
         model.append(
             _LogEntry(
-                timestamp="14:32:07",
+                timestamp="2026-05-24T14:32:07.123",
                 level="ERROR",
                 logger_name="obcd_pilot.detection",
                 message="Change detected in frame 142",

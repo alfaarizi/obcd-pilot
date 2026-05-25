@@ -87,9 +87,14 @@ class _LogEntry:
 
     @classmethod
     def from_record(cls, record: logging.LogRecord) -> Self:
-        """Build an entry from a stdlib LogRecord arriving on the Qt bridge."""
+        """Build an entry from a stdlib LogRecord arriving on the Qt bridge.
+
+        Timestamp matches the on disk ISO format so Export round trips cleanly.
+        """
+        dt = datetime.fromtimestamp(record.created)
+        timestamp = f"{dt.strftime('%Y-%m-%dT%H:%M:%S')}.{int(record.msecs):03d}"
         return cls(
-            timestamp=datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
+            timestamp=timestamp,
             level=record.levelname,
             logger_name=record.name,
             message=record.getMessage(),
@@ -256,7 +261,8 @@ class _LogDelegate(QStyledItemDelegate):
 
         painter.setFont(self._mono)
         painter.setPen(_COLOR_TS)
-        painter.drawText(x, baseline_y, entry.timestamp)
+        # Render only the wall clock portion HH:MM:SS for visual compactness.
+        painter.drawText(x, baseline_y, entry.timestamp[11:19])
         x += self._TS_WIDTH
 
         level_text = "WARN" if entry.level == "WARNING" else entry.level
@@ -300,7 +306,6 @@ class LogsView(QWidget):
         self._view.setUniformItemSizes(True)
         self._view.setMouseTracking(True)
         self._view.setSelectionMode(QListView.SelectionMode.SingleSelection)
-        self._view.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self._count_label = QLabel()
         self._count_label.setObjectName("logs-count")
@@ -476,7 +481,6 @@ class LogsView(QWidget):
         button.setObjectName("logs-tool-button")
         button.setIconSize(QSize(13, 13))
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         return button
 
 
@@ -485,10 +489,8 @@ def _parse_line(line: str) -> _LogEntry | None:
     match = _LINE_RE.match(line)
     if match is None:
         return None
-    # File stores the full ISO timestamp. The row displays only the wall clock.
-    short_ts = match["ts"].split("T", 1)[-1].split(".", 1)[0]
     return _LogEntry(
-        timestamp=short_ts,
+        timestamp=match["ts"],
         level=match["level"],
         logger_name=match["logger"],
         message=match["msg"],

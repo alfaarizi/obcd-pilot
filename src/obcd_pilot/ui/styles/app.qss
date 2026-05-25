@@ -52,6 +52,10 @@ QToolBar#nav-sidebar QToolButton:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
+QToolBar#nav-sidebar QToolButton:focus {
+    background: rgba(14, 114, 237, 0.20);
+}
+
 QToolBar#nav-sidebar QToolButton:checked {
     background: rgba(255, 255, 255, 0.12);
 }
@@ -379,6 +383,10 @@ QPushButton#logs-tool-button {
 QPushButton#logs-tool-button:hover {
     background: #232323;
     border-color: rgba(255, 255, 255, 0.18);
+}
+
+QPushButton#logs-tool-button:focus {
+    border-color: rgba(14, 114, 237, 0.55);
 }
 
 QPushButton#logs-tool-button:pressed {
