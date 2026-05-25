@@ -46,9 +46,13 @@ class _SignalHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Overloaded stdlib method.
 
-        Republish the record on the Qt bridge for cross thread UI delivery.
-        """
-        self._bridge.sig_record.emit(record)
+        Republish the record on the Qt bridge for cross thread UI delivery."""
+        try:
+            self._bridge.sig_record.emit(record)
+        except RecursionError:
+            raise
+        except Exception:
+            self.handleError(record)
 
 
 _bridge: _QtLogBridge | None = None
@@ -130,7 +134,13 @@ def configure(
     has_matching_file_handler = False
     for handler in list(logger.handlers):
         if isinstance(handler, RotatingFileHandler):
-            if Path(handler.baseFilename) == path:
+            try:
+                same = Path(handler.baseFilename).samefile(path)
+            except OSError:
+                same = os.path.normcase(handler.baseFilename) == os.path.normcase(
+                    str(path)
+                )
+            if same:
                 has_matching_file_handler = True
             else:
                 logger.removeHandler(handler)
