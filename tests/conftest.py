@@ -1,7 +1,7 @@
 """Shared pytest fixtures for the obcd-pilot test suite."""
 
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -38,12 +38,13 @@ def make_detection() -> Callable[..., Detection]:
 
 
 @pytest.fixture(autouse=True)
-def app_log_isolated(tmp_path: Path) -> None:
-    """Reset and reconfigure the app logger per test with a tmp file."""
+def app_log_isolated(tmp_path: Path) -> Iterator[None]:
+    """Configure the app logger per test and tear it down on teardown."""
     from obcd_pilot import app_log
 
-    app_log.reset()
     app_log.configure(tmp_path / "obcd_pilot.log")
+    yield
+    app_log.reset()
 
 
 @pytest.fixture()
