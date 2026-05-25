@@ -87,6 +87,21 @@ def resolve_log_path(override: Path | None = None) -> Path:
     return (base / DEFAULT_LOG_PATH).resolve()
 
 
+def reset() -> None:
+    """Detach all handlers from the app logger and clear cached state.
+
+    Frees file handles and drops the Qt bridge singleton.
+    """
+    global _bridge, _active_path
+
+    logger = logging.getLogger(ROOT_LOGGER_NAME)
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
+    _bridge = None
+    _active_path = None
+
+
 def configure(
     log_path: Path | None = None, level: int = logging.INFO
 ) -> logging.Logger:

@@ -1,6 +1,5 @@
 """Shared pytest fixtures for the obcd-pilot test suite."""
 
-import logging
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -43,13 +42,7 @@ def app_log_isolated(tmp_path: Path) -> None:
     """Reset and reconfigure the app logger per test with a tmp file."""
     from obcd_pilot import app_log
 
-    logger = logging.getLogger(app_log.ROOT_LOGGER_NAME)
-    for handler in list(logger.handlers):
-        logger.removeHandler(handler)
-        handler.close()
-    app_log._bridge = None
-    app_log._active_path = None
-
+    app_log.reset()
     app_log.configure(tmp_path / "obcd_pilot.log")
 
 

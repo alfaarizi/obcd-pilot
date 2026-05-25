@@ -45,6 +45,8 @@ def main() -> None:
         from obcd_pilot.ui.main_window import MainWindow
 
         app_log.configure().info("Application started, OBCD Pilot v%s", __version__)
+        app.aboutToQuit.connect(app_log.reset)
+
         window = MainWindow()
         _center_on_screen(window)
         window.show()
