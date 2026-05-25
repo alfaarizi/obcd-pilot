@@ -92,7 +92,7 @@ def configure(
 ) -> logging.Logger:
     """Attach the rotating file handler and Qt bridge to the app root logger.
 
-    Idempotent so re entry during tests does not duplicate writes.
+    Idempotent so re-entry during tests does not duplicate writes.
     """
     global _bridge, _active_path
 

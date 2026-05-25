@@ -173,12 +173,12 @@ class _LogProxy(QSortFilterProxyModel):
         self._needle: str = ""
 
     def set_category(self, value: str) -> None:
-        """Switch the category filter and re evaluate visible rows."""
+        """Switch the category filter and re-evaluate visible rows."""
         self._category = value
         self.invalidate()
 
     def set_needle(self, value: str) -> None:
-        """Set the case insensitive search needle and re evaluate rows."""
+        """Set the case insensitive search needle and re-evaluate rows."""
         self._needle = value.casefold()
         self.invalidate()
 

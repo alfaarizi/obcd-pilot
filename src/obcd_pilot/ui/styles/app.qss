@@ -328,7 +328,6 @@ QWidget#logs-statusbar {
 QListView#logs-list {
     background: #1e1e1e;
     border: none;
-    outline: 0;
     selection-background-color: rgba(14, 114, 237, 0.18);
 }
 
