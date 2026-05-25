@@ -1,14 +1,50 @@
 """Shared pytest fixtures for the obcd-pilot test suite."""
 
 import sys
+from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
+
+from obcd_pilot.pipeline import Detection
 
 
 @pytest.fixture(scope="session")
 def qapp_args() -> list[str]:
     """Override pytest-qt default args to suppress platform warnings."""
     return [sys.argv[0]]
+
+
+@pytest.fixture()
+def make_detection() -> Callable[..., Detection]:
+    """Factory fixture that builds a Detection with overridable fields."""
+
+    def _build(
+        *,
+        change_detected: bool = True,
+        frame_id: int = 42,
+        confidence: float = 0.91,
+    ) -> Detection:
+        return Detection(
+            frame_id=frame_id,
+            timestamp_ms=1.0,
+            change_detected=change_detected,
+            confidence=confidence,
+            inference_ms=120.0,
+            model_name="ConvOBCD",
+        )
+
+    return _build
+
+
+@pytest.fixture(autouse=True)
+def app_log_isolated(tmp_path: Path) -> Iterator[None]:
+    """Configure the app logger per test and tear it down on teardown."""
+    from obcd_pilot import app_log
+
+    app_log.configure(tmp_path / "obcd_pilot.log")
+    yield
+    app_log.reset()
 
 
 @pytest.fixture()

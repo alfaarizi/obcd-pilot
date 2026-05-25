@@ -63,10 +63,18 @@ class TestMainWindowNavSidebar:
 class TestMainWindowStack:
     """Tests for the central stacked widget."""
 
-    def test_stack_has_monitor_view(self, window: MainWindow) -> None:
-        """The stacked widget contains exactly one view (MonitorView) at startup."""
-        assert window._stack.count() == 1
+    def test_stack_holds_monitor_and_logs_views(self, window: MainWindow) -> None:
+        """The stacked widget contains MonitorView (0) and LogsView (1)."""
+        assert window._stack.count() == 2
 
     def test_monitor_view_is_current(self, window: MainWindow) -> None:
         """MonitorView is the active (index 0) page on startup."""
         assert window._stack.currentIndex() == 0
+
+    def test_nav_logs_action_switches_stack(self, window: MainWindow) -> None:
+        """Triggering the Logs nav action selects the LogsView page."""
+        logs_action = next(
+            a for a in window._nav_sidebar.actions() if a.text() == "Logs"
+        )
+        logs_action.trigger()
+        assert window._stack.currentIndex() == 1
