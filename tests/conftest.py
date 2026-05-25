@@ -1,14 +1,56 @@
 """Shared pytest fixtures for the obcd-pilot test suite."""
 
+import logging
 import sys
+from collections.abc import Callable
+from pathlib import Path
 
 import pytest
+
+from obcd_pilot.pipeline import Detection
 
 
 @pytest.fixture(scope="session")
 def qapp_args() -> list[str]:
     """Override pytest-qt default args to suppress platform warnings."""
     return [sys.argv[0]]
+
+
+@pytest.fixture()
+def make_detection() -> Callable[..., Detection]:
+    """Factory fixture that builds a Detection with overridable fields."""
+
+    def _build(
+        *,
+        change_detected: bool = True,
+        frame_id: int = 42,
+        confidence: float = 0.91,
+    ) -> Detection:
+        return Detection(
+            frame_id=frame_id,
+            timestamp_ms=1.0,
+            change_detected=change_detected,
+            confidence=confidence,
+            inference_ms=120.0,
+            model_name="ConvOBCD",
+        )
+
+    return _build
+
+
+@pytest.fixture(autouse=True)
+def app_log_isolated(qapp: object, tmp_path: Path) -> None:
+    """Reset and reconfigure the app logger per test with a tmp file."""
+    from obcd_pilot import app_log
+
+    logger = logging.getLogger(app_log.ROOT_LOGGER_NAME)
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
+    app_log._bridge = None
+    app_log._active_path = None
+
+    app_log.configure(tmp_path / "obcd_pilot.log")
 
 
 @pytest.fixture()
