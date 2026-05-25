@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from obcd_pilot import app_log
 from obcd_pilot.capture import (
     CameraInfo,
     CameraWorker,
@@ -225,6 +226,7 @@ class Preview(QWidget):
 
         self._camera_worker = worker
         self._camera_button.setIcon(_ICON_VIDEO_ON)
+        logger.info("Camera started: %s", camera.name)
 
     def _stop_camera(self) -> None:
         """Stop the current camera worker if running."""
@@ -258,6 +260,7 @@ class Preview(QWidget):
         self._video_worker.seek(0, resume=False)
         self._playback_overlay.setVisible(True)
         self._playback_overlay.set_playing(False)
+        logger.info("Video loaded: %s", path.name)
 
     def _close_video(self) -> None:
         """Stop and discard the current video worker."""
@@ -282,6 +285,7 @@ class Preview(QWidget):
         obcd_thread = QThread(self)
         obcd_worker.moveToThread(obcd_thread)
         obcd_worker.sig_detection.connect(self.sig_detection)
+        obcd_worker.sig_detection.connect(app_log.log_detection)
         obcd_worker.sig_model_ready.connect(self.sig_model_ready)
         obcd_thread.started.connect(obcd_worker.start_model)
         # Reclaim both after quit() per https://doc.qt.io/qt-6/qthread.html

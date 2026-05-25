@@ -1,5 +1,6 @@
 """Background worker that produces change detections from consecutive frames."""
 
+import logging
 import time
 from pathlib import Path
 from typing import Literal
@@ -22,6 +23,8 @@ _MODEL_NAMES: dict[ModelVariant, Literal["ConvOBCD", "TransOBCD"]] = {
     "conv": "ConvOBCD",
     "trans": "TransOBCD",
 }
+
+logger = logging.getLogger(__name__)
 
 
 class OBCDWorker(QObject):
@@ -53,7 +56,9 @@ class OBCDWorker(QObject):
         )
         name = _MODEL_NAMES[self._variant]
         trained = self._checkpoint_path is not None and self._checkpoint_path.exists()
-        self.sig_model_ready.emit(name if trained else f"{name} (untrained)")
+        display_name = name if trained else f"{name} (untrained)"
+        logger.info("Pipeline started with model %s", display_name)
+        self.sig_model_ready.emit(display_name)
 
     @Slot(Frame)
     def push_frame(self, frame: Frame) -> None:

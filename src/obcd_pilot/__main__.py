@@ -7,6 +7,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen, QWidget
 
+from obcd_pilot import __version__
+
 
 def _resource_path(rel: str) -> Path:
     """Resolve a bundled-asset path. Works in dev and frozen PyInstaller builds."""
@@ -39,8 +41,10 @@ def main() -> None:
             _resource_path("ui/styles/app.qss").read_text(encoding="utf-8")
         )
 
+        from obcd_pilot import app_log
         from obcd_pilot.ui.main_window import MainWindow
 
+        app_log.configure().info("Application started, OBCD Pilot v%s", __version__)
         window = MainWindow()
         _center_on_screen(window)
         window.show()
