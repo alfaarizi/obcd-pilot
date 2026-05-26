@@ -641,6 +641,7 @@ class _ChangeOverlay(QWidget):
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setClipRect(image_rect)
         stroke = QPen(self._COLOR, self._PEN_WIDTH)
         metrics = painter.fontMetrics()
         label_h = metrics.ascent() + metrics.descent()
@@ -666,6 +667,12 @@ class _ChangeOverlay(QWidget):
             )
             if label_rect.bottom() > image_rect.bottom():
                 label_rect.moveBottom(box.top() - edge - self._LABEL_GAP)
+            if label_rect.right() > image_rect.right():
+                label_rect.moveRight(image_rect.right())
+            if label_rect.left() < image_rect.left():
+                label_rect.moveLeft(image_rect.left())
+            if label_rect.top() < image_rect.top():
+                label_rect.moveTop(image_rect.top())
             painter.fillRect(label_rect, self._COLOR)
             painter.setPen(Qt.GlobalColor.white)
             painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, label_text)
