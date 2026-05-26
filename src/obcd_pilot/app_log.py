@@ -46,7 +46,8 @@ class _SignalHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         """Overloaded stdlib method.
 
-        Republish the record on the Qt bridge for cross thread UI delivery."""
+        Republish the record on the Qt bridge for cross thread UI delivery.
+        """
         try:
             self._bridge.sig_record.emit(record)
         except RecursionError:
@@ -118,6 +119,9 @@ def configure(
     path = resolve_log_path(log_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.touch(exist_ok=True)
+
+    if _bridge is None:
+        _bridge = _QtLogBridge()
     _active_path = path
 
     logger = logging.getLogger(ROOT_LOGGER_NAME)
@@ -126,39 +130,21 @@ def configure(
     # so basicConfig() cannot hijack us.
     logger.propagate = False
 
-    if _bridge is None:
-        _bridge = _QtLogBridge()
-
-    # Drop any stale file handler pointing at a different path so reconfigure
-    # to a new location does not duplicate writes across files.
-    has_matching_file_handler = False
     for handler in list(logger.handlers):
-        if isinstance(handler, RotatingFileHandler):
-            try:
-                same = Path(handler.baseFilename).samefile(path)
-            except OSError:
-                same = os.path.normcase(handler.baseFilename) == os.path.normcase(
-                    str(path)
-                )
-            if same:
-                has_matching_file_handler = True
-            else:
-                logger.removeHandler(handler)
-                handler.close()
+        logger.removeHandler(handler)
+        handler.close()
 
-    if not has_matching_file_handler:
-        file_handler = RotatingFileHandler(
-            path,
-            maxBytes=_MAX_BYTES,
-            backupCount=_BACKUP_COUNT,
-            encoding="utf-8",
-            delay=True,
-        )
-        file_handler.setFormatter(logging.Formatter(_LOG_FORMAT, datefmt=_DATE_FORMAT))
-        logger.addHandler(file_handler)
+    file_handler = RotatingFileHandler(
+        path,
+        maxBytes=_MAX_BYTES,
+        backupCount=_BACKUP_COUNT,
+        encoding="utf-8",
+        delay=True,
+    )
+    file_handler.setFormatter(logging.Formatter(_LOG_FORMAT, datefmt=_DATE_FORMAT))
 
-    if not any(isinstance(h, _SignalHandler) for h in logger.handlers):
-        logger.addHandler(_SignalHandler(_bridge))
+    logger.addHandler(file_handler)
+    logger.addHandler(_SignalHandler(_bridge))
 
     return logger
 

@@ -331,7 +331,7 @@ class LogsView(QWidget):
 
         self._count_label = QLabel()
         self._count_label.setObjectName("logs-count")
-        self._path_label = QLabel(f"Log file: {self._log_path}")
+        self._path_label = QLabel(f"File: {self._log_path}")
         self._path_label.setObjectName("logs-path")
         self._path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
@@ -357,6 +357,7 @@ class LogsView(QWidget):
             self._proxy.rowsInserted,
             self._proxy.rowsRemoved,
             self._proxy.modelReset,
+            self._proxy.layoutChanged,
         ):
             signal.connect(self._update_count_label)
 
@@ -370,7 +371,7 @@ class LogsView(QWidget):
         Anchor to the latest entry every time the view becomes visible.
         """
         super().showEvent(event)
-        self._anchor_to_tail()
+        self._anchor_to_tail(deferred=False)
 
     @Slot()
     def _reload_from_file(self) -> None:
@@ -451,9 +452,12 @@ class LogsView(QWidget):
         bar = self._view.verticalScrollBar()
         return bar.value() >= bar.maximum() - 4
 
-    def _anchor_to_tail(self) -> None:
-        """Scroll to the bottom on the next event loop tick."""
-        QTimer.singleShot(0, self._view, self._view.scrollToBottom)
+    def _anchor_to_tail(self, deferred: bool = True) -> None:
+        """Scroll to the bottom, inline or on the next event loop tick."""
+        if deferred:
+            QTimer.singleShot(0, self._view, self._view.scrollToBottom)
+        else:
+            self._view.scrollToBottom()
 
     def _create_toolbar(self) -> QWidget:
         """Build the top toolbar holding filter, search, refresh, and export."""
