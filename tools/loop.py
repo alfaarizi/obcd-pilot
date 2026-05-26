@@ -75,7 +75,7 @@ def _run_epoch(
                 assert optimizer is not None
                 optimizer.zero_grad()
 
-            preds = model(img1, img2)
+            preds, _ = model(img1, img2)
             loss = criterion(preds, target)
 
             if train_mode:
