@@ -566,7 +566,8 @@ class _Canvas(QWidget):
         """
         super().paintEvent(event)
         rect = self.image_rect()
-        if rect is None:
+        # explicit _image is None check to pass mypy
+        if rect is None or self._image is None:
             return
 
         painter = QPainter(self)
@@ -606,9 +607,17 @@ class _ChangeOverlay(QWidget):
 
     @Slot(Detection)
     def on_detection(self, detection: Detection) -> None:
-        """Cache the latest detection state and schedule a repaint."""
+        """Cache the latest detection state and schedule a repaint.
+
+        Bboxes track only unmatched objects, so the model can report
+        change_detected with an empty bbox tuple when the change comes from
+        matched objects shifting.
+        """
         self._change_detected = detection.change_detected
-        self._bboxes = detection.change_bboxes
+        if not detection.change_detected:
+            self._bboxes = ()
+        elif detection.change_bboxes:
+            self._bboxes = detection.change_bboxes
         self.update()
 
     @Slot()

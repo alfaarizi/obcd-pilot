@@ -681,6 +681,21 @@ class TestChangeOverlayState:
         assert overlay._bboxes == ()
         assert overlay._change_detected is False
 
+    def test_on_detection_keeps_previous_bboxes_when_empty(
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
+    ) -> None:
+        """change_detected with empty bboxes keeps the previous bboxes sticky.
+
+        The model can report a change driven by matched objects shifting,
+        which yields an empty bbox tuple. Preserving the last bboxes avoids
+        an overlay blink while the status panel stays red.
+        """
+        bboxes = ((0.1, 0.1, 0.5, 0.5, "person"),)
+        overlay.on_detection(make_detection(change_bboxes=bboxes))
+        overlay.on_detection(make_detection(change_bboxes=()))
+        assert overlay._bboxes == bboxes
+        assert overlay._change_detected is True
+
 
 class TestChangeOverlayPaint:
     """Tests for _ChangeOverlay.paintEvent."""
@@ -737,12 +752,18 @@ class TestPreviewChangeOverlayWiring:
         assert preview._change_overlay._change_detected is True
 
     def test_sig_pipeline_reset_clears_overlay(
-        self, preview: Preview, make_detection: Callable[..., Detection]
+        self,
+        preview: Preview,
+        qtbot: QtBot,
+        make_detection: Callable[..., Detection],
     ) -> None:
         """Emitting sig_pipeline_reset clears the overlay state."""
         preview.sig_detection.emit(
             make_detection(change_bboxes=((0.0, 0.0, 1.0, 1.0, "car"),))
         )
         preview.sig_pipeline_reset.emit()
+        # Reset is wired as QueuedConnection so late detections cannot
+        # repopulate bboxes after the clear. Wait for the queue to drain.
+        qtbot.waitUntil(lambda: not preview._change_overlay._change_detected)
         assert preview._change_overlay._bboxes == ()
         assert preview._change_overlay._change_detected is False
