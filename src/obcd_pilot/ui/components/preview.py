@@ -656,7 +656,8 @@ class _ChangeOverlay(QWidget):
             painter.setPen(stroke)
             painter.drawRect(box)
 
-            label_w = metrics.horizontalAdvance(name) + 2 * self._LABEL_PAD_X
+            label_text = self._format_label(name)
+            label_w = metrics.horizontalAdvance(label_text) + 2 * self._LABEL_PAD_X
             label_rect = QRectF(
                 box.right() + edge - label_w,
                 box.bottom() + edge + self._LABEL_GAP,
@@ -667,6 +668,11 @@ class _ChangeOverlay(QWidget):
                 label_rect.moveBottom(box.top() - edge - self._LABEL_GAP)
             painter.fillRect(label_rect, self._COLOR)
             painter.setPen(Qt.GlobalColor.white)
-            painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, name)
+            painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, label_text)
 
         painter.end()
+
+    @staticmethod
+    def _format_label(name: str) -> str:
+        """Title case each word in a YOLO class name for on screen display."""
+        return name.title()

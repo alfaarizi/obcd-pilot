@@ -697,6 +697,23 @@ class TestChangeOverlayState:
         assert overlay._change_detected is True
 
 
+class TestChangeOverlayLabel:
+    """Tests for the on screen formatting of bbox class labels."""
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("potted plant", "Potted Plant"),
+            ("cell phone", "Cell Phone"),
+            ("person", "Person"),
+            ("teddy bear", "Teddy Bear"),
+        ],
+    )
+    def test_format_label_title_cases_each_word(self, raw: str, expected: str) -> None:
+        """YOLO class names render with each word capitalized."""
+        assert _ChangeOverlay._format_label(raw) == expected
+
+
 class TestChangeOverlayPaint:
     """Tests for _ChangeOverlay.paintEvent."""
 
