@@ -13,8 +13,6 @@ from obcd_pilot.capture import CameraInfo
 from obcd_pilot.pipeline import Detection
 from obcd_pilot.ui.components.preview import Preview, _Canvas, _ChangeOverlay
 
-MakeDetection = Callable[..., Detection]
-
 
 @pytest.fixture()
 def canvas(qtbot: QtBot) -> _Canvas:
@@ -653,7 +651,7 @@ class TestChangeOverlayState:
         assert overlay._change_detected is False
 
     def test_on_detection_change_caches_bboxes(
-        self, overlay: _ChangeOverlay, make_detection: MakeDetection
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
     ) -> None:
         """on_detection with change_detected stores the supplied bboxes."""
         bboxes = ((0.1, 0.1, 0.5, 0.5, "person"),)
@@ -662,7 +660,7 @@ class TestChangeOverlayState:
         assert overlay._change_detected is True
 
     def test_on_detection_no_change_resets_state(
-        self, overlay: _ChangeOverlay, make_detection: MakeDetection
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
     ) -> None:
         """on_detection with change_detected=False drops the cached state."""
         overlay.on_detection(
@@ -673,7 +671,7 @@ class TestChangeOverlayState:
         assert overlay._change_detected is False
 
     def test_clear_resets_state(
-        self, overlay: _ChangeOverlay, make_detection: MakeDetection
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
     ) -> None:
         """clear() drops bboxes and the change flag."""
         overlay.on_detection(
@@ -699,7 +697,7 @@ class TestChangeOverlayPaint:
         self,
         overlay: _ChangeOverlay,
         qtbot: QtBot,
-        make_detection: MakeDetection,
+        make_detection: Callable[..., Detection],
     ) -> None:
         """paintEvent with cached bboxes completes without raising."""
         overlay.on_detection(
@@ -713,7 +711,7 @@ class TestChangeOverlayPaint:
         self,
         overlay: _ChangeOverlay,
         qtbot: QtBot,
-        make_detection: MakeDetection,
+        make_detection: Callable[..., Detection],
     ) -> None:
         """paintEvent with the change flag but no bboxes still completes."""
         overlay.on_detection(make_detection())
@@ -730,7 +728,7 @@ class TestPreviewChangeOverlayWiring:
         assert isinstance(preview._change_overlay, _ChangeOverlay)
 
     def test_sig_detection_updates_overlay(
-        self, preview: Preview, make_detection: MakeDetection
+        self, preview: Preview, make_detection: Callable[..., Detection]
     ) -> None:
         """Emitting sig_detection feeds bboxes into the overlay."""
         bboxes = ((0.2, 0.2, 0.8, 0.8, "person"),)
@@ -739,7 +737,7 @@ class TestPreviewChangeOverlayWiring:
         assert preview._change_overlay._change_detected is True
 
     def test_sig_pipeline_reset_clears_overlay(
-        self, preview: Preview, make_detection: MakeDetection
+        self, preview: Preview, make_detection: Callable[..., Detection]
     ) -> None:
         """Emitting sig_pipeline_reset clears the overlay state."""
         preview.sig_detection.emit(
