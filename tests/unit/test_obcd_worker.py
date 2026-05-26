@@ -86,7 +86,7 @@ class TestPushFrame:
         self, worker: OBCDWorker, qtbot: QtBot
     ) -> None:
         """The first frame primes the previous tensor. The second emits."""
-        worker._model = _mock_model(return_value=torch.tensor([[0.8]]))
+        worker._model = _mock_model(return_value=(torch.tensor([[0.8]]), ()))
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)
 
@@ -103,6 +103,23 @@ class TestPushFrame:
         assert detection.model_name == "ConvOBCD"
         assert detection.inference_ms >= 0.0
         assert detection.timestamp_ms > 0.0
+        assert detection.change_bboxes == ()
+
+    def test_emits_change_bboxes_from_model(
+        self, worker: OBCDWorker, qtbot: QtBot
+    ) -> None:
+        """Bboxes returned by the model are forwarded onto the Detection."""
+        bboxes = ((0.1, 0.2, 0.3, 0.4, "person"), (0.5, 0.6, 0.7, 0.8, "car"))
+        worker._model = _mock_model(return_value=(torch.tensor([[0.9]]), bboxes))
+        received: list[Detection] = []
+        worker.sig_detection.connect(received.append)
+
+        worker.push_frame(_frame())
+        qtbot.waitUntil(lambda: worker._prev_tensor is not None, timeout=1000)
+        worker.push_frame(_frame())
+        qtbot.waitUntil(lambda: len(received) == 1, timeout=1000)
+
+        assert received[0].change_bboxes == bboxes
 
     @pytest.mark.parametrize(
         "confidence,expected_change",
@@ -120,7 +137,7 @@ class TestPushFrame:
         expected_change: bool,
     ) -> None:
         """change_detected is True only when confidence > 0.5."""
-        worker._model = _mock_model(return_value=torch.tensor([[confidence]]))
+        worker._model = _mock_model(return_value=(torch.tensor([[confidence]]), ()))
         received: list[Detection] = []
         worker.sig_detection.connect(received.append)
 
@@ -137,11 +154,13 @@ class TestPushFrame:
         """A frame pushed mid-inference is processed once the worker is free."""
         calls: list[int] = []
 
-        def infer(prev: torch.Tensor, curr: torch.Tensor) -> torch.Tensor:
+        def infer(
+            prev: torch.Tensor, curr: torch.Tensor
+        ) -> tuple[torch.Tensor, tuple[tuple[float, float, float, float], ...]]:
             calls.append(1)
             if len(calls) == 1:
                 worker.push_frame(_frame())
-            return torch.tensor([[0.9]])
+            return torch.tensor([[0.9]]), ()
 
         worker._model = _mock_model(side_effect=infer)
         received: list[Detection] = []
