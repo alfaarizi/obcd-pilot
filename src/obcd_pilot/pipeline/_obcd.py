@@ -133,7 +133,8 @@ def process_pipeline(
 
     return (
         matched_features1, matched_features2, unmatched_features1, unmatched_features2,
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, max_objects
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, max_objects,
+        unmatched_indices1, unmatched_indices2,
     )
 
 
@@ -155,6 +156,37 @@ def joint_normalize_min_max(metadata1, metadata2):
     normalized_metadata2 = (metadata2 - min_vals) / range_vals
 
     return normalized_metadata1, normalized_metadata2
+
+
+def _extract_change_bboxes(
+    rois1, rois2, per_object_metadata1, per_object_metadata2,
+    unmatched_indices1, unmatched_indices2,
+    width, height, names,
+):
+    """Return normalized (x1, y1, x2, y2, label) tuples for unmatched ROIs in batch zero.
+
+    Unmatched ROIs cover new and vanished detections. The dummy [0, 0, 1, 1] placeholder 
+    ROI emitted for empty frames is filtered.
+    """
+    bboxes = []
+    pairs = (
+        (rois1, per_object_metadata1, unmatched_indices1),
+        (rois2, per_object_metadata2, unmatched_indices2),
+    )
+    for rois, meta, unmatched in pairs:
+        mask = rois[:, 0] == 0
+        batch_rois = rois[mask]
+        batch_cls = meta[mask, 2]
+        for batch_idx, local_idx in unmatched:
+            if int(batch_idx) != 0:
+                continue
+            box = batch_rois[local_idx, 1:].tolist()
+            if box == [0.0, 0.0, 1.0, 1.0]:
+                continue
+            label = names.get(int(batch_cls[local_idx].item()), "object")
+            x1, y1, x2, y2 = box
+            bboxes.append((x1 / width, y1 / height, x2 / width, y2 / height, label))
+    return tuple(bboxes)
 
 
 class ConvOBCDModel(nn.Module):
@@ -334,7 +366,8 @@ class ConvOBCDModel(nn.Module):
         per_object_metadata2, whole_metadata2, rois2 = self.extract_metadata(results2, self.num_classes)
 
         matched_features1, matched_features2, unmatched_features1, unmatched_features2, \
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size \
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size, \
+        unmatched_indices1, unmatched_indices2 \
         = process_pipeline(
             image1,
             rois1,
@@ -381,7 +414,13 @@ class ConvOBCDModel(nn.Module):
         change_prob = self.combined_fc(combined_input)
         change_prob = torch.sigmoid(change_prob)
 
-        return change_prob
+        change_bboxes = _extract_change_bboxes(
+            rois1, rois2, per_object_metadata1, per_object_metadata2,
+            unmatched_indices1, unmatched_indices2,
+            float(image1.shape[-1]), float(image1.shape[-2]),
+            self.yolo_model.names,
+        )
+        return change_prob, change_bboxes
 
     def set_train(self) -> None:
         """Put the trainable submodules into training mode."""
@@ -585,7 +624,8 @@ class TransOBCDModel(nn.Module):
         per_object_metadata2, whole_metadata2, rois2 = self.extract_metadata(results2, self.num_classes)
 
         matched_features1, matched_features2, unmatched_features1, unmatched_features2, \
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size \
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size, \
+        unmatched_indices1, unmatched_indices2 \
         = process_pipeline(
             image1,
             rois1,
@@ -611,7 +651,13 @@ class TransOBCDModel(nn.Module):
         combined = torch.cat([matched_rep1, matched_rep2, unmatched_rep1, unmatched_rep2, whole_rep], dim=-1)
         change_prob = self.combined_fc(combined)
 
-        return change_prob
+        change_bboxes = _extract_change_bboxes(
+            rois1, rois2, per_object_metadata1, per_object_metadata2,
+            unmatched_indices1, unmatched_indices2,
+            float(image1.shape[-1]), float(image1.shape[-2]),
+            self.yolo_model.names,
+        )
+        return change_prob, change_bboxes
 
     def set_train(self) -> None:
         """Put the trainable submodules into training mode."""
