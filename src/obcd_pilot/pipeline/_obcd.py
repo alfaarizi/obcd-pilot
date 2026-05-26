@@ -30,7 +30,7 @@ def match_features(features1, features2, rois1, rois2, threshold=_MATCH_THRESHOL
     matched_indices1, matched_indices2 = [], []
     unmatched_indices1, unmatched_indices2 = [], []
 
-    for batch_idx in torch.unique(batch_indices1):
+    for batch_idx in torch.unique(batch_indices1).tolist():
         f1 = features1[batch_indices1 == batch_idx]
         f2 = features2[batch_indices2 == batch_idx]
 
@@ -168,22 +168,22 @@ def _extract_change_bboxes(
     Unmatched ROIs cover new and vanished detections. The dummy [0, 0, 1, 1] placeholder 
     ROI emitted for empty frames is filtered.
     """
-    bboxes = []
+    bboxes: list[tuple[float, float, float, float, str]] = []
     pairs = (
         (rois1, per_object_metadata1, unmatched_indices1),
         (rois2, per_object_metadata2, unmatched_indices2),
     )
-    for rois, meta, unmatched in pairs:
+    for rois, per_object_metadata, unmatched_indices in pairs:
+        local_indices = [local_idx for batch_idx, local_idx in unmatched_indices if batch_idx == 0]
+        if not local_indices:
+            continue
         mask = rois[:, 0] == 0
-        batch_rois = rois[mask]
-        batch_cls = meta[mask, 2]
-        for batch_idx, local_idx in unmatched:
-            if int(batch_idx) != 0:
-                continue
-            box = batch_rois[local_idx, 1:].tolist()
+        boxes = rois[mask][local_indices, 1:].detach().cpu().tolist()
+        classes = per_object_metadata[mask, 2][local_indices].long().detach().cpu().tolist()
+        for box, cls_idx in zip(boxes, classes, strict=True):
             if box == [0.0, 0.0, 1.0, 1.0]:
                 continue
-            label = names.get(int(batch_cls[local_idx].item()), "object")
+            label = names.get(cls_idx, "object")
             x1, y1, x2, y2 = box
             bboxes.append((x1 / width, y1 / height, x2 / width, y2 / height, label))
     return tuple(bboxes)
