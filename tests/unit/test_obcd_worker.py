@@ -156,7 +156,7 @@ class TestPushFrame:
 
         def infer(
             prev: torch.Tensor, curr: torch.Tensor
-        ) -> tuple[torch.Tensor, tuple[tuple[float, float, float, float], ...]]:
+        ) -> tuple[torch.Tensor, tuple[tuple[float, float, float, float, str], ...]]:
             calls.append(1)
             if len(calls) == 1:
                 worker.push_frame(_frame())

@@ -357,7 +357,6 @@ class LogsView(QWidget):
             self._source_model.rowsInserted,
             self._source_model.rowsRemoved,
             self._source_model.modelReset,
-            self._proxy.layoutChanged,
         ):
             signal.connect(self._update_count_label)
 
@@ -403,12 +402,14 @@ class LogsView(QWidget):
         value = self._category_combo.itemData(index)
         if isinstance(value, str):
             self._proxy.set_category(value)
+            self._update_count_label()
             self._anchor_to_tail()
 
     @Slot(str)
     def _on_search_changed(self, text: str) -> None:
         """Apply the search needle and anchor to the latest matching row."""
         self._proxy.set_needle(text)
+        self._update_count_label()
         self._anchor_to_tail()
 
     @Slot()

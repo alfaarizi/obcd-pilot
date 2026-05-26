@@ -566,7 +566,7 @@ class _Canvas(QWidget):
         """
         super().paintEvent(event)
         rect = self.image_rect()
-        if rect is None or self._image is None:
+        if rect is None:
             return
 
         painter = QPainter(self)
