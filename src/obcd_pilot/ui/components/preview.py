@@ -149,7 +149,9 @@ class Preview(QWidget):
 
         # Signals
         self.sig_detection.connect(self._change_overlay.on_detection)
-        self.sig_pipeline_reset.connect(self._change_overlay.clear)
+        self.sig_pipeline_reset.connect(
+            self._change_overlay.clear, Qt.ConnectionType.QueuedConnection
+        )
 
         self._camera_menu.installEventFilter(self)
         self._camera_menu.triggered.connect(self._on_camera_selected)

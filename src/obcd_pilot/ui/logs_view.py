@@ -354,9 +354,9 @@ class LogsView(QWidget):
         self._refresh_btn.clicked.connect(self._reload_from_file)
         self._export_btn.clicked.connect(self._on_export_clicked)
         for signal in (
-            self._proxy.rowsInserted,
-            self._proxy.rowsRemoved,
-            self._proxy.modelReset,
+            self._source_model.rowsInserted,
+            self._source_model.rowsRemoved,
+            self._source_model.modelReset,
             self._proxy.layoutChanged,
         ):
             signal.connect(self._update_count_label)
