@@ -1,5 +1,6 @@
 """Integration tests for _Canvas and Preview widget."""
 
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -9,7 +10,8 @@ from PySide6.QtGui import QAction, QImage
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot.capture import CameraInfo
-from obcd_pilot.ui.components.preview import Preview, _Canvas
+from obcd_pilot.pipeline import Detection
+from obcd_pilot.ui.components.preview import Preview, _Canvas, _ChangeOverlay
 
 
 @pytest.fixture()
@@ -599,3 +601,186 @@ class TestPreviewEventFilter:
         event = QEvent(QEvent.Type.Show)
         preview.eventFilter(preview._canvas, event)
         assert not refreshed
+
+
+@pytest.fixture()
+def overlay(qtbot: QtBot) -> _ChangeOverlay:
+    """A _ChangeOverlay backed by a sized canvas holding a 200x100 image."""
+    canvas = _Canvas()
+    canvas.set(_create_solid_image(200, 100))
+    canvas.resize(200, 100)
+    qtbot.addWidget(canvas)
+
+    widget = _ChangeOverlay(canvas)
+    widget.resize(200, 100)
+    qtbot.addWidget(widget)
+    return widget
+
+
+class TestCanvasImageRect:
+    """Tests for _Canvas.image_rect."""
+
+    def test_returns_none_without_image(self, canvas: _Canvas) -> None:
+        """image_rect returns None when no frame has been set."""
+        assert canvas.image_rect() is None
+
+    def test_centers_aspect_preserved_image(self, canvas: _Canvas) -> None:
+        """image_rect fits the image and centers any letterbox."""
+        canvas.set(_create_solid_image(200, 100))  # 2:1
+        canvas.resize(200, 200)
+        rect = canvas.image_rect()
+        assert rect is not None
+        assert (rect.width(), rect.height()) == (200, 100)
+        assert (rect.x(), rect.y()) == (0, 50)
+
+    def test_fills_when_aspect_matches(self, canvas: _Canvas) -> None:
+        """image_rect spans the full canvas when aspect ratios match."""
+        canvas.set(_create_solid_image(100, 100))
+        canvas.resize(80, 80)
+        rect = canvas.image_rect()
+        assert rect is not None
+        assert (rect.x(), rect.y(), rect.width(), rect.height()) == (0, 0, 80, 80)
+
+
+class TestChangeOverlayState:
+    """Tests for _ChangeOverlay state transitions."""
+
+    def test_starts_idle(self, overlay: _ChangeOverlay) -> None:
+        """Overlay holds no bboxes and no detection at construction."""
+        assert overlay._bboxes == ()
+        assert overlay._change_detected is False
+
+    def test_on_detection_change_caches_bboxes(
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
+    ) -> None:
+        """on_detection with change_detected stores the supplied bboxes."""
+        bboxes = ((0.1, 0.1, 0.5, 0.5, "person"),)
+        overlay.on_detection(make_detection(change_bboxes=bboxes))
+        assert overlay._bboxes == bboxes
+        assert overlay._change_detected is True
+
+    def test_on_detection_no_change_resets_state(
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
+    ) -> None:
+        """on_detection with change_detected=False drops the cached state."""
+        overlay.on_detection(
+            make_detection(change_bboxes=((0.0, 0.0, 1.0, 1.0, "car"),))
+        )
+        overlay.on_detection(make_detection(change_detected=False))
+        assert overlay._bboxes == ()
+        assert overlay._change_detected is False
+
+    def test_clear_resets_state(
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
+    ) -> None:
+        """clear() drops bboxes and the change flag."""
+        overlay.on_detection(
+            make_detection(change_bboxes=((0.0, 0.0, 1.0, 1.0, "car"),))
+        )
+        overlay.clear()
+        assert overlay._bboxes == ()
+        assert overlay._change_detected is False
+
+    def test_on_detection_keeps_previous_bboxes_when_empty(
+        self, overlay: _ChangeOverlay, make_detection: Callable[..., Detection]
+    ) -> None:
+        """change_detected with empty bboxes keeps the previous bboxes sticky.
+
+        The model can report a change driven by matched objects shifting,
+        which yields an empty bbox tuple. Preserving the last bboxes avoids
+        an overlay blink while the status panel stays red.
+        """
+        bboxes = ((0.1, 0.1, 0.5, 0.5, "person"),)
+        overlay.on_detection(make_detection(change_bboxes=bboxes))
+        overlay.on_detection(make_detection(change_bboxes=()))
+        assert overlay._bboxes == bboxes
+        assert overlay._change_detected is True
+
+
+class TestChangeOverlayLabel:
+    """Tests for the on screen formatting of bbox class labels."""
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("potted plant", "Potted Plant"),
+            ("cell phone", "Cell Phone"),
+            ("person", "Person"),
+            ("teddy bear", "Teddy Bear"),
+        ],
+    )
+    def test_format_label_title_cases_each_word(self, raw: str, expected: str) -> None:
+        """YOLO class names render with each word capitalized."""
+        assert _ChangeOverlay._format_label(raw) == expected
+
+
+class TestChangeOverlayPaint:
+    """Tests for _ChangeOverlay.paintEvent."""
+
+    def test_paint_idle_does_not_raise(
+        self, overlay: _ChangeOverlay, qtbot: QtBot
+    ) -> None:
+        """paintEvent in the idle state completes without raising."""
+        overlay.show()
+        qtbot.waitExposed(overlay)
+        overlay.update()
+
+    def test_paint_with_bboxes_does_not_raise(
+        self,
+        overlay: _ChangeOverlay,
+        qtbot: QtBot,
+        make_detection: Callable[..., Detection],
+    ) -> None:
+        """paintEvent with cached bboxes completes without raising."""
+        overlay.on_detection(
+            make_detection(change_bboxes=((0.1, 0.1, 0.4, 0.4, "person"),))
+        )
+        overlay.show()
+        qtbot.waitExposed(overlay)
+        overlay.update()
+
+    def test_paint_change_without_bboxes_does_not_raise(
+        self,
+        overlay: _ChangeOverlay,
+        qtbot: QtBot,
+        make_detection: Callable[..., Detection],
+    ) -> None:
+        """paintEvent with the change flag but no bboxes still completes."""
+        overlay.on_detection(make_detection())
+        overlay.show()
+        qtbot.waitExposed(overlay)
+        overlay.update()
+
+
+class TestPreviewChangeOverlayWiring:
+    """Tests for Preview hooking sig_detection into _change_overlay."""
+
+    def test_change_overlay_exists(self, preview: Preview) -> None:
+        """Preview constructs a _ChangeOverlay alongside the canvas."""
+        assert isinstance(preview._change_overlay, _ChangeOverlay)
+
+    def test_sig_detection_updates_overlay(
+        self, preview: Preview, make_detection: Callable[..., Detection]
+    ) -> None:
+        """Emitting sig_detection feeds bboxes into the overlay."""
+        bboxes = ((0.2, 0.2, 0.8, 0.8, "person"),)
+        preview.sig_detection.emit(make_detection(change_bboxes=bboxes))
+        assert preview._change_overlay._bboxes == bboxes
+        assert preview._change_overlay._change_detected is True
+
+    def test_sig_pipeline_reset_clears_overlay(
+        self,
+        preview: Preview,
+        qtbot: QtBot,
+        make_detection: Callable[..., Detection],
+    ) -> None:
+        """Emitting sig_pipeline_reset clears the overlay state."""
+        preview.sig_detection.emit(
+            make_detection(change_bboxes=((0.0, 0.0, 1.0, 1.0, "car"),))
+        )
+        preview.sig_pipeline_reset.emit()
+        # Reset is wired as QueuedConnection so late detections cannot
+        # repopulate bboxes after the clear. Wait for the queue to drain.
+        qtbot.waitUntil(lambda: not preview._change_overlay._change_detected)
+        assert preview._change_overlay._bboxes == ()
+        assert preview._change_overlay._change_detected is False

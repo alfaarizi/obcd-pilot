@@ -11,19 +11,24 @@ from PySide6.QtCore import (
     QEvent,
     QObject,
     QPoint,
+    QRect,
+    QRectF,
     QSize,
     QStandardPaths,
     Qt,
     QThread,
     Signal,
+    Slot,
 )
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
+    QColor,
     QIcon,
     QImage,
     QPainter,
     QPaintEvent,
+    QPen,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -107,6 +112,7 @@ class Preview(QWidget):
         # Widgets
         self._canvas = _Canvas()
         self._canvas_message = _CanvasMessage()
+        self._change_overlay = _ChangeOverlay(self._canvas)
         self._playback_overlay = PlaybackOverlay()
 
         self._camera_menu = QMenu(self)
@@ -130,6 +136,7 @@ class Preview(QWidget):
         stack_layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
         stack_layout.addWidget(self._canvas)
         stack_layout.addWidget(self._canvas_message)
+        stack_layout.addWidget(self._change_overlay)
         stack_layout.addWidget(self._playback_overlay)
         canvas_stack.setLayout(stack_layout)
 
@@ -141,6 +148,11 @@ class Preview(QWidget):
         self.setLayout(root)
 
         # Signals
+        self.sig_detection.connect(self._change_overlay.on_detection)
+        self.sig_pipeline_reset.connect(
+            self._change_overlay.clear, Qt.ConnectionType.QueuedConnection
+        )
+
         self._camera_menu.installEventFilter(self)
         self._camera_menu.triggered.connect(self._on_camera_selected)
         self._camera_button.clicked.connect(self._on_camera_clicked)
@@ -535,32 +547,139 @@ class _Canvas(QWidget):
         self._image = None
         self.update()
 
+    def image_rect(self) -> QRect | None:
+        """Return the on-screen rectangle currently occupied by the image."""
+        if self._image is None:
+            return None
+        canvas_size = self.size()
+        scaled = self._image.size().scaled(
+            canvas_size, Qt.AspectRatioMode.KeepAspectRatio
+        )
+        x = (canvas_size.width() - scaled.width()) // 2
+        y = (canvas_size.height() - scaled.height()) // 2
+        return QRect(x, y, scaled.width(), scaled.height())
+
     def paintEvent(self, event: QPaintEvent) -> None:
         """Overloaded Qt method.
 
         Paint the current frame scaled to fit the widget.
         """
         super().paintEvent(event)
-        if self._image is None:
+        rect = self.image_rect()
+        # explicit _image is None check to pass mypy
+        if rect is None or self._image is None:
             return
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
-        canvas_size = self.size()
-        scaled_image_size = self._image.size().scaled(
-            canvas_size, Qt.AspectRatioMode.KeepAspectRatio
-        )
-        x = (canvas_size.width() - scaled_image_size.width()) // 2
-        y = (canvas_size.height() - scaled_image_size.height()) // 2
-
         painter.drawImage(
-            x,
-            y,
+            rect.topLeft(),
             self._image.scaled(
-                scaled_image_size,
+                rect.size(),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             ),
         )
         painter.end()
+
+
+class _ChangeOverlay(QWidget):
+    """Red bbox overlay labeling each changed object with its class name.
+
+    Maps normalized detection bboxes onto the canvas's image rect, so the
+    label tracks the displayed frame across resizes and letterboxing.
+    """
+
+    _COLOR = QColor(239, 68, 68)
+    _PEN_WIDTH = 2
+    _LABEL_GAP = 0
+    _LABEL_PAD_X = 2
+
+    def __init__(self, canvas: _Canvas) -> None:
+        super().__init__()
+        self.setObjectName("change-overlay")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+        self._canvas = canvas
+        self._change_detected = False
+        self._bboxes: tuple[tuple[float, float, float, float, str], ...] = ()
+
+    @Slot(Detection)
+    def on_detection(self, detection: Detection) -> None:
+        """Cache the latest detection state and schedule a repaint.
+
+        Bboxes track only unmatched objects, so the model can report
+        change_detected with an empty bbox tuple when the change comes from
+        matched objects shifting.
+        """
+        self._change_detected = detection.change_detected
+        if not detection.change_detected:
+            self._bboxes = ()
+        elif detection.change_bboxes:
+            self._bboxes = detection.change_bboxes
+        self.update()
+
+    @Slot()
+    def clear(self) -> None:
+        """Drop cached state and repaint blank."""
+        self._change_detected = False
+        self._bboxes = ()
+        self.update()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Overloaded Qt method.
+
+        Paint bboxes and labels mapped onto the canvas's image rect.
+        """
+        super().paintEvent(event)
+        if not self._change_detected:
+            return
+        image_rect = self._canvas.image_rect()
+        if image_rect is None:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setClipRect(image_rect)
+        stroke = QPen(self._COLOR, self._PEN_WIDTH)
+        metrics = painter.fontMetrics()
+        label_h = metrics.ascent() + metrics.descent()
+        edge = self._PEN_WIDTH / 2
+
+        for x1, y1, x2, y2, name in self._bboxes:
+            box = QRectF(
+                image_rect.x() + x1 * image_rect.width(),
+                image_rect.y() + y1 * image_rect.height(),
+                (x2 - x1) * image_rect.width(),
+                (y2 - y1) * image_rect.height(),
+            )
+            painter.setPen(stroke)
+            painter.drawRect(box)
+
+            label_text = self._format_label(name)
+            label_w = metrics.horizontalAdvance(label_text) + 2 * self._LABEL_PAD_X
+            label_rect = QRectF(
+                box.right() + edge - label_w,
+                box.bottom() + edge + self._LABEL_GAP,
+                label_w,
+                label_h,
+            )
+            if label_rect.bottom() > image_rect.bottom():
+                label_rect.moveBottom(box.top() - edge - self._LABEL_GAP)
+            if label_rect.right() > image_rect.right():
+                label_rect.moveRight(image_rect.right())
+            if label_rect.left() < image_rect.left():
+                label_rect.moveLeft(image_rect.left())
+            if label_rect.top() < image_rect.top():
+                label_rect.moveTop(image_rect.top())
+            painter.fillRect(label_rect, self._COLOR)
+            painter.setPen(Qt.GlobalColor.white)
+            painter.drawText(label_rect, Qt.AlignmentFlag.AlignCenter, label_text)
+
+        painter.end()
+
+    @staticmethod
+    def _format_label(name: str) -> str:
+        """Title case each word in a YOLO class name for on screen display."""
+        return name.title()

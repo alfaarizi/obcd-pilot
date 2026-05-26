@@ -14,9 +14,9 @@ from obcd_pilot.pipeline import Detection
 from obcd_pilot.ui import icons_rc  # noqa: F401
 from obcd_pilot.ui.utils import separators
 
-_ICON_NO_CHANGE = QIcon(":/icons/circle-check-big.svg")
+_ICON_NO_CHANGE = QIcon(":/icons/message-circle-check.svg")
 _ICON_CHANGE = QIcon(":/icons/triangle-alert.svg")
-_ICON_SIZE = 24
+_ICON_SIZE = 28
 
 _ALARM_CHANNELS: list[str] = [
     "Pop-up",
@@ -49,7 +49,7 @@ class StatusPanel(QWidget):
         self._status_icon = QLabel()
         self._status_icon.setPixmap(_ICON_NO_CHANGE.pixmap(_ICON_SIZE, _ICON_SIZE))
         self._status_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._status_icon.setFixedSize(48, 48)
+        self._status_icon.setFixedSize(_ICON_SIZE, _ICON_SIZE)
 
         self._status_label = QLabel("No change")
         self._status_label.setObjectName("status-label")
@@ -147,9 +147,11 @@ class StatusPanel(QWidget):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(14, 16, 14, 16)
-        layout.setSpacing(6)
+        layout.setSpacing(2)
         layout.addWidget(self._status_icon, alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addSpacing(2)
         layout.addWidget(self._status_label)
+        layout.addSpacing(4)
         layout.addWidget(self._status_desc_label)
 
         self._detection_status.setLayout(layout)

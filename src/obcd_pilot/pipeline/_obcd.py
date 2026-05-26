@@ -30,7 +30,7 @@ def match_features(features1, features2, rois1, rois2, threshold=_MATCH_THRESHOL
     matched_indices1, matched_indices2 = [], []
     unmatched_indices1, unmatched_indices2 = [], []
 
-    for batch_idx in torch.unique(batch_indices1):
+    for batch_idx in torch.unique(batch_indices1).tolist():
         f1 = features1[batch_indices1 == batch_idx]
         f2 = features2[batch_indices2 == batch_idx]
 
@@ -133,7 +133,8 @@ def process_pipeline(
 
     return (
         matched_features1, matched_features2, unmatched_features1, unmatched_features2,
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, max_objects
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, max_objects,
+        unmatched_indices1, unmatched_indices2,
     )
 
 
@@ -155,6 +156,37 @@ def joint_normalize_min_max(metadata1, metadata2):
     normalized_metadata2 = (metadata2 - min_vals) / range_vals
 
     return normalized_metadata1, normalized_metadata2
+
+
+def _extract_change_bboxes(
+    rois1, rois2, per_object_metadata1, per_object_metadata2,
+    unmatched_indices1, unmatched_indices2,
+    width, height, names,
+):
+    """Return normalized (x1, y1, x2, y2, label) tuples for unmatched ROIs in batch zero.
+
+    Unmatched ROIs cover new and vanished detections. The dummy [0, 0, 1, 1] placeholder 
+    ROI emitted for empty frames is filtered.
+    """
+    bboxes: list[tuple[float, float, float, float, str]] = []
+    pairs = (
+        (rois1, per_object_metadata1, unmatched_indices1),
+        (rois2, per_object_metadata2, unmatched_indices2),
+    )
+    for rois, per_object_metadata, unmatched_indices in pairs:
+        local_indices = [local_idx for batch_idx, local_idx in unmatched_indices if batch_idx == 0]
+        if not local_indices:
+            continue
+        mask = rois[:, 0] == 0
+        boxes = rois[mask][local_indices, 1:].detach().cpu().tolist()
+        classes = per_object_metadata[mask, 2][local_indices].long().detach().cpu().tolist()
+        for box, cls_idx in zip(boxes, classes, strict=True):
+            if box == [0.0, 0.0, 1.0, 1.0]:
+                continue
+            label = names.get(cls_idx, "object")
+            x1, y1, x2, y2 = box
+            bboxes.append((x1 / width, y1 / height, x2 / width, y2 / height, label))
+    return tuple(bboxes)
 
 
 class ConvOBCDModel(nn.Module):
@@ -334,7 +366,8 @@ class ConvOBCDModel(nn.Module):
         per_object_metadata2, whole_metadata2, rois2 = self.extract_metadata(results2, self.num_classes)
 
         matched_features1, matched_features2, unmatched_features1, unmatched_features2, \
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size \
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size, \
+        unmatched_indices1, unmatched_indices2 \
         = process_pipeline(
             image1,
             rois1,
@@ -381,7 +414,13 @@ class ConvOBCDModel(nn.Module):
         change_prob = self.combined_fc(combined_input)
         change_prob = torch.sigmoid(change_prob)
 
-        return change_prob
+        change_bboxes = _extract_change_bboxes(
+            rois1, rois2, per_object_metadata1, per_object_metadata2,
+            unmatched_indices1, unmatched_indices2,
+            float(image1.shape[-1]), float(image1.shape[-2]),
+            self.yolo_model.names,
+        )
+        return change_prob, change_bboxes
 
     def set_train(self) -> None:
         """Put the trainable submodules into training mode."""
@@ -585,7 +624,8 @@ class TransOBCDModel(nn.Module):
         per_object_metadata2, whole_metadata2, rois2 = self.extract_metadata(results2, self.num_classes)
 
         matched_features1, matched_features2, unmatched_features1, unmatched_features2, \
-        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size \
+        matched_metadata1, matched_metadata2, unmatched_metadata1, unmatched_metadata2, padding_size, \
+        unmatched_indices1, unmatched_indices2 \
         = process_pipeline(
             image1,
             rois1,
@@ -611,7 +651,13 @@ class TransOBCDModel(nn.Module):
         combined = torch.cat([matched_rep1, matched_rep2, unmatched_rep1, unmatched_rep2, whole_rep], dim=-1)
         change_prob = self.combined_fc(combined)
 
-        return change_prob
+        change_bboxes = _extract_change_bboxes(
+            rois1, rois2, per_object_metadata1, per_object_metadata2,
+            unmatched_indices1, unmatched_indices2,
+            float(image1.shape[-1]), float(image1.shape[-2]),
+            self.yolo_model.names,
+        )
+        return change_prob, change_bboxes
 
     def set_train(self) -> None:
         """Put the trainable submodules into training mode."""

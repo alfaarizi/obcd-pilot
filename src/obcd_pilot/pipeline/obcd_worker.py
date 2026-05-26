@@ -85,7 +85,8 @@ class OBCDWorker(QObject):
         if self._prev_tensor is not None:
             start = time.perf_counter()
             with torch.inference_mode():
-                confidence = float(model(self._prev_tensor, curr_tensor).item())
+                prob_tensor, change_bboxes = model(self._prev_tensor, curr_tensor)
+                confidence = float(prob_tensor.item())
             inference_ms = (time.perf_counter() - start) * 1000.0
 
             self.sig_detection.emit(
@@ -96,6 +97,7 @@ class OBCDWorker(QObject):
                     confidence=confidence,
                     inference_ms=inference_ms,
                     model_name=_MODEL_NAMES[self._variant],
+                    change_bboxes=change_bboxes,
                 )
             )
 

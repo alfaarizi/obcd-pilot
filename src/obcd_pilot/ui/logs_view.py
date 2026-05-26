@@ -331,7 +331,7 @@ class LogsView(QWidget):
 
         self._count_label = QLabel()
         self._count_label.setObjectName("logs-count")
-        self._path_label = QLabel(f"Log file: {self._log_path}")
+        self._path_label = QLabel(f"File: {self._log_path}")
         self._path_label.setObjectName("logs-path")
         self._path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
@@ -354,9 +354,9 @@ class LogsView(QWidget):
         self._refresh_btn.clicked.connect(self._reload_from_file)
         self._export_btn.clicked.connect(self._on_export_clicked)
         for signal in (
-            self._proxy.rowsInserted,
-            self._proxy.rowsRemoved,
-            self._proxy.modelReset,
+            self._source_model.rowsInserted,
+            self._source_model.rowsRemoved,
+            self._source_model.modelReset,
         ):
             signal.connect(self._update_count_label)
 
@@ -370,7 +370,7 @@ class LogsView(QWidget):
         Anchor to the latest entry every time the view becomes visible.
         """
         super().showEvent(event)
-        self._anchor_to_tail()
+        self._anchor_to_tail(deferred=False)
 
     @Slot()
     def _reload_from_file(self) -> None:
@@ -402,12 +402,14 @@ class LogsView(QWidget):
         value = self._category_combo.itemData(index)
         if isinstance(value, str):
             self._proxy.set_category(value)
+            self._update_count_label()
             self._anchor_to_tail()
 
     @Slot(str)
     def _on_search_changed(self, text: str) -> None:
         """Apply the search needle and anchor to the latest matching row."""
         self._proxy.set_needle(text)
+        self._update_count_label()
         self._anchor_to_tail()
 
     @Slot()
@@ -451,9 +453,12 @@ class LogsView(QWidget):
         bar = self._view.verticalScrollBar()
         return bar.value() >= bar.maximum() - 4
 
-    def _anchor_to_tail(self) -> None:
-        """Scroll to the bottom on the next event loop tick."""
-        QTimer.singleShot(0, self._view, self._view.scrollToBottom)
+    def _anchor_to_tail(self, deferred: bool = True) -> None:
+        """Scroll to the bottom, inline or on the next event loop tick."""
+        if deferred:
+            QTimer.singleShot(0, self._view, self._view.scrollToBottom)
+        else:
+            self._view.scrollToBottom()
 
     def _create_toolbar(self) -> QWidget:
         """Build the top toolbar holding filter, search, refresh, and export."""

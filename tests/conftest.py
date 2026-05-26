@@ -24,6 +24,7 @@ def make_detection() -> Callable[..., Detection]:
         change_detected: bool = True,
         frame_id: int = 42,
         confidence: float = 0.91,
+        change_bboxes: tuple[tuple[float, float, float, float, str], ...] = (),
     ) -> Detection:
         return Detection(
             frame_id=frame_id,
@@ -32,6 +33,7 @@ def make_detection() -> Callable[..., Detection]:
             confidence=confidence,
             inference_ms=120.0,
             model_name="ConvOBCD",
+            change_bboxes=change_bboxes,
         )
 
     return _build

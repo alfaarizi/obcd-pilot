@@ -41,8 +41,8 @@ class TestConfigure:
         logger = app_log.configure(tmp_path / "app.log")
         assert any(isinstance(h, RotatingFileHandler) for h in logger.handlers)
 
-    def test_is_idempotent(self, tmp_path: Path) -> None:
-        """Re-calling configure() does not duplicate handlers."""
+    def test_repeated_configure_keeps_single_handler_pair(self, tmp_path: Path) -> None:
+        """Re-calling configure() rebuilds handlers without accumulating them."""
         path = tmp_path / "app.log"
         app_log.configure(path)
         first = len(logging.getLogger(app_log.ROOT_LOGGER_NAME).handlers)

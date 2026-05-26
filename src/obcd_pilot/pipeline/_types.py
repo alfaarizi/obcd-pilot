@@ -17,6 +17,8 @@ class Detection:
         confidence: Sigmoid output in [0.0, 1.0].
         inference_ms: End-to-end inference time in milliseconds.
         model_name: name of the model that produced the result.
+        change_bboxes: Normalized (x1, y1, x2, y2, label) tuples in [0.0, 1.0]
+            for each object that appeared or vanished between frames.
     """
 
     frame_id: int
@@ -25,3 +27,4 @@ class Detection:
     confidence: float
     inference_ms: float
     model_name: Literal["ConvOBCD", "TransOBCD"]
+    change_bboxes: tuple[tuple[float, float, float, float, str], ...] = ()
