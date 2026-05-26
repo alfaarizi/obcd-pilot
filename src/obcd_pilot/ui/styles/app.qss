@@ -110,12 +110,10 @@ QLabel#section-header {
 
 QWidget#detection-status {
     background: transparent;
-    border-left: 3px solid transparent;
 }
 
 QWidget#detection-status[changed="true"] {
-    background: rgba(239, 68, 68, 0.08);
-    border-left: 3px solid #ef4444;
+    background: rgba(239, 68, 68, 0.10);
 }
 
 QLabel#status-label {
@@ -124,17 +122,14 @@ QLabel#status-label {
     color: #f5f5f5;
 }
 
-QLabel#status-label[changed="true"] {
-    color: #ef4444;
-}
-
 QLabel#status-desc-label {
     font-size: 11px;
     color: rgba(245, 245, 245, 0.48);
 }
 
+QLabel#status-label[changed="true"],
 QLabel#status-desc-label[changed="true"] {
-    color: rgba(239, 68, 68, 0.78);
+    color: #f87171;
 }
 
 QLabel#alarm-dot {
