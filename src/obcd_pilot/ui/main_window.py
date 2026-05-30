@@ -14,10 +14,12 @@ from PySide6.QtWidgets import (
 
 from obcd_pilot import __version__
 from obcd_pilot.ui import icons_rc  # noqa: F401
+from obcd_pilot.ui.alarms_view import AlarmsView
 from obcd_pilot.ui.logs_view import LogsView
 from obcd_pilot.ui.monitor_view import MonitorView
 
 _ICON_MONITOR = QIcon(":/icons/monitor.svg")
+_ICON_BELL = QIcon(":/icons/bell.svg")
 _ICON_FILE_TEXT = QIcon(":/icons/file-text.svg")
 
 
@@ -32,6 +34,7 @@ class MainWindow(QMainWindow):
 
         self._stack = QStackedWidget()
         self._stack.addWidget(MonitorView())
+        self._stack.addWidget(AlarmsView())
         self._stack.addWidget(LogsView())
         self._nav_sidebar: QToolBar = self._create_nav_sidebar()
         self._status_bar: QWidget = self._create_service_bar()
@@ -63,6 +66,7 @@ class MainWindow(QMainWindow):
         for index, (icon, label) in enumerate(
             (
                 (_ICON_MONITOR, "Monitor"),
+                (_ICON_BELL, "Alarms"),
                 (_ICON_FILE_TEXT, "Logs"),
             )
         ):

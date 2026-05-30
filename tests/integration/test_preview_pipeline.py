@@ -47,10 +47,14 @@ class TestStartPipeline:
         self, preview: Preview, stub_pipeline: StubPipeline
     ) -> None:
         """_start_pipeline relays the worker's signals through Preview's own."""
+        from PySide6.QtCore import Qt
+
         worker_cls, _ = stub_pipeline
         preview._start_pipeline()
         worker = worker_cls.return_value
-        worker.sig_detection.connect.assert_any_call(preview.sig_detection)
+        worker.sig_detection.connect.assert_any_call(
+            preview.sig_detection, Qt.ConnectionType.QueuedConnection
+        )
         worker.sig_model_ready.connect.assert_any_call(preview.sig_model_ready)
 
     def test_replaces_existing_pipeline(

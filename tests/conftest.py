@@ -5,14 +5,41 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QCoreApplication, QSettings
 
+from obcd_pilot import alarm
 from obcd_pilot.pipeline import Detection
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolated_qsettings(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Redirect QSettings storage to a per-session tmp dir.
+
+    AlarmSettingsStore constructs a bare QSettings(), which without this fixture
+    would read and write the developer's real Qt settings location. Switching to
+    IniFormat and pinning the user/system scope paths under tmp keeps the suite
+    hermetic even if a test crashes mid-run.
+    """
+    QCoreApplication.setOrganizationName("OBCD")
+    QCoreApplication.setApplicationName("obcd-pilot-tests")
+    QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+    root = str(tmp_path_factory.mktemp("qsettings"))
+    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, root)
+    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.SystemScope, root)
 
 
 @pytest.fixture(scope="session")
 def qapp_args() -> list[str]:
     """Override pytest-qt default args to suppress platform warnings."""
     return [sys.argv[0]]
+
+
+@pytest.fixture(autouse=True)
+def _isolated_alarm_settings() -> Iterator[None]:
+    """Reset persisted alarm settings and the cached store around every test."""
+    alarm.settings.reset()
+    yield
+    alarm.settings.reset()
 
 
 @pytest.fixture()
