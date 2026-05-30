@@ -106,7 +106,7 @@ class PopupAlarm(QWidget):
         self._meta_label.setText(_format_meta(detection))
         self._fit_to_parent()
         self._present()
-        self._dismiss_timer.start(settings.popup_timeout_ms)
+        self._dismiss_timer.start(settings.popup_timeout_s * 1000)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Overloaded Qt method.

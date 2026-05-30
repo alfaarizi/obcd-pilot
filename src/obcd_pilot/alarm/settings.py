@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, QSettings, Signal, Slot
 
 _KEY_GROUP = "alarms"
 _KEY_POPUP_ENABLED = f"{_KEY_GROUP}/popup_enabled"
-_KEY_POPUP_TIMEOUT_MS = f"{_KEY_GROUP}/popup_timeout_ms"
+_KEY_POPUP_TIMEOUT_S = f"{_KEY_GROUP}/popup_timeout_s"
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +20,7 @@ class AlarmSettings:
     """Snapshot of all alarm channel settings."""
 
     popup_enabled: bool = True
-    popup_timeout_ms: int = 3_000
+    popup_timeout_s: int = 3
 
 
 class AlarmSettingsStore(QObject):
@@ -45,9 +45,9 @@ class AlarmSettingsStore(QObject):
         self._apply(replace(self._settings, popup_enabled=value))
 
     @Slot(int)
-    def set_popup_timeout_ms(self, value: int) -> None:
+    def set_popup_timeout_s(self, value: int) -> None:
         """Update the pop-up auto-dismiss timeout and persist the change."""
-        self._apply(replace(self._settings, popup_timeout_ms=value))
+        self._apply(replace(self._settings, popup_timeout_s=value))
 
     def _apply(self, snapshot: AlarmSettings) -> None:
         """Commit a new snapshot, persist it, and notify observers."""
@@ -66,10 +66,10 @@ class AlarmSettingsStore(QObject):
                     _KEY_POPUP_ENABLED, defaults.popup_enabled, type=bool
                 )
             ),
-            popup_timeout_ms=cast(
+            popup_timeout_s=cast(
                 int,
                 self._qsettings.value(
-                    _KEY_POPUP_TIMEOUT_MS, defaults.popup_timeout_ms, type=int
+                    _KEY_POPUP_TIMEOUT_S, defaults.popup_timeout_s, type=int
                 ),
             ),
         )
@@ -77,7 +77,7 @@ class AlarmSettingsStore(QObject):
     def _persist(self, snapshot: AlarmSettings) -> None:
         """Write a snapshot through to QSettings."""
         self._qsettings.setValue(_KEY_POPUP_ENABLED, snapshot.popup_enabled)
-        self._qsettings.setValue(_KEY_POPUP_TIMEOUT_MS, snapshot.popup_timeout_ms)
+        self._qsettings.setValue(_KEY_POPUP_TIMEOUT_S, snapshot.popup_timeout_s)
 
 
 _store: AlarmSettingsStore | None = None
@@ -94,5 +94,7 @@ def store() -> AlarmSettingsStore:
 def reset() -> None:
     """Clear persisted alarm settings and drop the store."""
     global _store
-    QSettings().remove(_KEY_GROUP)
+    qsettings = _store._qsettings if _store is not None else QSettings()
+    qsettings.remove(_KEY_GROUP)
+    qsettings.sync()
     _store = None

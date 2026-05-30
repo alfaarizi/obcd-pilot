@@ -81,10 +81,8 @@ class AlarmsView(QWidget):
         spin.setObjectName("popup-timeout-spin")
         spin.setRange(_TIMEOUT_MIN_S, _TIMEOUT_MAX_S)
         spin.setSuffix(" s")
-        spin.setValue(self._store.settings.popup_timeout_ms // 1_000)
-        spin.valueChanged.connect(
-            lambda seconds: self._store.set_popup_timeout_ms(seconds * 1_000)
-        )
+        spin.setValue(self._store.settings.popup_timeout_s)
+        spin.valueChanged.connect(self._store.set_popup_timeout_s)
         return spin
 
     @staticmethod
@@ -109,8 +107,7 @@ class AlarmsView(QWidget):
             checkbox.setChecked(target)
             checkbox.blockSignals(False)
 
-        popup_timeout_s = settings.popup_timeout_ms // 1_000
-        if self._popup_timeout_spin.value() != popup_timeout_s:
+        if self._popup_timeout_spin.value() != settings.popup_timeout_s:
             self._popup_timeout_spin.blockSignals(True)
-            self._popup_timeout_spin.setValue(popup_timeout_s)
+            self._popup_timeout_spin.setValue(settings.popup_timeout_s)
             self._popup_timeout_spin.blockSignals(False)

@@ -19,7 +19,7 @@ class TestDefaults:
 
     def test_default_popup_timeout_is_three_seconds(self) -> None:
         """The default pop-up auto-dismiss timeout is 3 seconds."""
-        assert AlarmSettings().popup_timeout_ms == 3_000
+        assert AlarmSettings().popup_timeout_s == 3
 
 
 class TestMutations:
@@ -35,15 +35,15 @@ class TestMutations:
         assert snapshot.popup_enabled is False
         assert store.settings.popup_enabled is False
 
-    def test_set_popup_timeout_ms_updates_and_emits(self, qtbot: QtBot) -> None:
-        """set_popup_timeout_ms writes the new value and emits the snapshot."""
+    def test_set_popup_timeout_s_updates_and_emits(self, qtbot: QtBot) -> None:
+        """set_popup_timeout_s writes the new value and emits the snapshot."""
         store = AlarmSettingsStore()
         with qtbot.waitSignal(store.sig_changed, timeout=500) as blocker:
-            store.set_popup_timeout_ms(8_000)
+            store.set_popup_timeout_s(8)
         snapshot = blocker.args[0]
         assert isinstance(snapshot, AlarmSettings)
-        assert snapshot.popup_timeout_ms == 8_000
-        assert store.settings.popup_timeout_ms == 8_000
+        assert snapshot.popup_timeout_s == 8
+        assert store.settings.popup_timeout_s == 8
 
     def test_setter_is_noop_when_value_unchanged(self, qtbot: QtBot) -> None:
         """Setting the same value does not reemit sig_changed."""
@@ -64,5 +64,5 @@ class TestPersistence:
     def test_popup_timeout_persists_across_stores(self) -> None:
         """A second store reads back the timeout the first one wrote."""
         first = AlarmSettingsStore()
-        first.set_popup_timeout_ms(12_000)
-        assert AlarmSettingsStore().settings.popup_timeout_ms == 12_000
+        first.set_popup_timeout_s(12)
+        assert AlarmSettingsStore().settings.popup_timeout_s == 12
