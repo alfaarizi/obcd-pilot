@@ -10,9 +10,17 @@ from typing import cast
 
 from PySide6.QtCore import QObject, QSettings, Signal, Slot
 
+POPUP_TIMEOUT_MIN_S = 1
+POPUP_TIMEOUT_MAX_S = 60
+
 _KEY_GROUP = "alarms"
 _KEY_POPUP_ENABLED = f"{_KEY_GROUP}/popup_enabled"
 _KEY_POPUP_TIMEOUT_S = f"{_KEY_GROUP}/popup_timeout_s"
+
+
+def _clamp_timeout_s(value: int) -> int:
+    """Constrain the pop-up auto-dismiss timeout to the supported range."""
+    return max(POPUP_TIMEOUT_MIN_S, min(POPUP_TIMEOUT_MAX_S, value))
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +55,7 @@ class AlarmSettingsStore(QObject):
     @Slot(int)
     def set_popup_timeout_s(self, value: int) -> None:
         """Update the pop-up auto-dismiss timeout and persist the change."""
-        self._apply(replace(self._settings, popup_timeout_s=value))
+        self._apply(replace(self._settings, popup_timeout_s=_clamp_timeout_s(value)))
 
     def _apply(self, snapshot: AlarmSettings) -> None:
         """Commit a new snapshot, persist it, and notify observers."""
@@ -66,11 +74,13 @@ class AlarmSettingsStore(QObject):
                     _KEY_POPUP_ENABLED, defaults.popup_enabled, type=bool
                 )
             ),
-            popup_timeout_s=cast(
-                int,
-                self._qsettings.value(
-                    _KEY_POPUP_TIMEOUT_S, defaults.popup_timeout_s, type=int
-                ),
+            popup_timeout_s=_clamp_timeout_s(
+                cast(
+                    int,
+                    self._qsettings.value(
+                        _KEY_POPUP_TIMEOUT_S, defaults.popup_timeout_s, type=int
+                    ),
+                )
             ),
         )
 
@@ -89,6 +99,12 @@ def store() -> AlarmSettingsStore:
     if _store is None:
         _store = AlarmSettingsStore()
     return _store
+
+
+def clear_cache() -> None:
+    """Drop the cached singleton store, leaving persisted values intact."""
+    global _store
+    _store = None
 
 
 def reset() -> None:

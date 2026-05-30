@@ -25,7 +25,7 @@ def test_renders_one_checkbox_per_channel(view: AlarmsView) -> None:
 def test_checkbox_reflects_persisted_state(qtbot: QtBot) -> None:
     """The checkbox starts in the state previously written to QSettings."""
     alarm.store().set_popup_enabled(False)
-    alarm.settings._store = None
+    alarm.settings.clear_cache()
     view = AlarmsView()
     qtbot.addWidget(view)
     _, checkbox = view._checkboxes[0]
@@ -51,7 +51,7 @@ def test_store_change_syncs_into_view(view: AlarmsView) -> None:
 def test_popup_timeout_spin_reflects_persisted_state(qtbot: QtBot) -> None:
     """The spin box opens at the value previously written to QSettings."""
     alarm.store().set_popup_timeout_s(9)
-    alarm.settings._store = None
+    alarm.settings.clear_cache()
     view = AlarmsView()
     qtbot.addWidget(view)
     assert view._popup_timeout_spin.value() == 9

@@ -4,6 +4,7 @@ from pytestqt.qtbot import QtBot
 
 from obcd_pilot import alarm
 from obcd_pilot.alarm import AlarmSettings, AlarmSettingsStore
+from obcd_pilot.alarm.settings import POPUP_TIMEOUT_MAX_S, POPUP_TIMEOUT_MIN_S
 
 
 class TestDefaults:
@@ -45,6 +46,16 @@ class TestMutations:
         assert snapshot.popup_timeout_s == 8
         assert store.settings.popup_timeout_s == 8
 
+    def test_set_popup_timeout_s_clamps_to_range(self) -> None:
+        """Out-of-range timeouts are clamped to the supported window."""
+        store = AlarmSettingsStore()
+        store.set_popup_timeout_s(0)
+        assert store.settings.popup_timeout_s == POPUP_TIMEOUT_MIN_S
+        store.set_popup_timeout_s(10_000)
+        assert store.settings.popup_timeout_s == POPUP_TIMEOUT_MAX_S
+        store.set_popup_timeout_s(-5)
+        assert store.settings.popup_timeout_s == POPUP_TIMEOUT_MIN_S
+
     def test_setter_is_noop_when_value_unchanged(self, qtbot: QtBot) -> None:
         """Setting the same value does not reemit sig_changed."""
         store = AlarmSettingsStore()
@@ -66,3 +77,13 @@ class TestPersistence:
         first = AlarmSettingsStore()
         first.set_popup_timeout_s(12)
         assert AlarmSettingsStore().settings.popup_timeout_s == 12
+
+
+class TestCache:
+    """clear_cache drops the singleton without touching persisted state."""
+
+    def test_clear_cache_forces_fresh_store_on_next_call(self) -> None:
+        """The next alarm.store() rebuilds the singleton after clear_cache."""
+        first = alarm.store()
+        alarm.settings.clear_cache()
+        assert alarm.store() is not first

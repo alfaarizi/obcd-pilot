@@ -21,9 +21,7 @@ from PySide6.QtWidgets import (
 
 from obcd_pilot import alarm
 from obcd_pilot.alarm import AlarmSettings, AlarmSettingsStore
-
-_TIMEOUT_MIN_S = 1
-_TIMEOUT_MAX_S = 60
+from obcd_pilot.alarm.settings import POPUP_TIMEOUT_MAX_S, POPUP_TIMEOUT_MIN_S
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +77,7 @@ class AlarmsView(QWidget):
         """Build the spin box for the pop-up auto-dismiss timeout in seconds."""
         spin = QSpinBox()
         spin.setObjectName("popup-timeout-spin")
-        spin.setRange(_TIMEOUT_MIN_S, _TIMEOUT_MAX_S)
+        spin.setRange(POPUP_TIMEOUT_MIN_S, POPUP_TIMEOUT_MAX_S)
         spin.setSuffix(" s")
         spin.setValue(self._store.settings.popup_timeout_s)
         spin.valueChanged.connect(self._store.set_popup_timeout_s)
