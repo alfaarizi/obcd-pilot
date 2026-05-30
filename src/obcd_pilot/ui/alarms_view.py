@@ -1,6 +1,6 @@
 """Alarm settings view.
 
-Each checkbox writes through to the store on toggle, and store side changes
+Each control writes through to the store on change, and store side changes
 sync back through sig_changed. New channels are added by appending one entry
 to the _CHANNELS tuple after extending AlarmSettings and the store.
 """
@@ -10,10 +10,20 @@ from dataclasses import dataclass
 from functools import partial
 
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QCheckBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from obcd_pilot import alarm
 from obcd_pilot.alarm import AlarmSettings, AlarmSettingsStore
+
+_TIMEOUT_MIN_S = 1
+_TIMEOUT_MAX_S = 60
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +45,7 @@ _CHANNELS: tuple[_Channel, ...] = (
 
 
 class AlarmsView(QWidget):
-    """Stacked toggles, one per alarm channel."""
+    """Stacked toggles, one per alarm channel, plus pop-up tunables."""
 
     def __init__(self) -> None:
         """Build a checkbox per channel and bind both directions to the store."""
@@ -44,6 +54,7 @@ class AlarmsView(QWidget):
 
         self._store = alarm.store()
         self._checkboxes: list[tuple[_Channel, QCheckBox]] = []
+        self._popup_timeout_spin = self._create_popup_timeout_spin()
 
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 24, 24, 24)
@@ -53,6 +64,7 @@ class AlarmsView(QWidget):
             checkbox = self._create_checkbox(channel)
             root.addWidget(checkbox)
             self._checkboxes.append((channel, checkbox))
+        root.addWidget(self._create_popup_timeout_row(self._popup_timeout_spin))
 
         self._store.sig_changed.connect(self._sync_from_store)
 
@@ -63,13 +75,42 @@ class AlarmsView(QWidget):
         checkbox.toggled.connect(partial(channel.setter, self._store))
         return checkbox
 
+    def _create_popup_timeout_spin(self) -> QSpinBox:
+        """Build the spin box for the pop-up auto-dismiss timeout in seconds."""
+        spin = QSpinBox()
+        spin.setObjectName("popup-timeout-spin")
+        spin.setRange(_TIMEOUT_MIN_S, _TIMEOUT_MAX_S)
+        spin.setSuffix(" s")
+        spin.setValue(self._store.settings.popup_timeout_ms // 1_000)
+        spin.valueChanged.connect(
+            lambda seconds: self._store.set_popup_timeout_ms(seconds * 1_000)
+        )
+        return spin
+
+    @staticmethod
+    def _create_popup_timeout_row(spin: QSpinBox) -> QWidget:
+        """Lay the timeout label and spin box on a single row."""
+        row = QWidget()
+        h_layout = QHBoxLayout(row)
+        h_layout.setContentsMargins(0, 0, 0, 0)
+        h_layout.addWidget(QLabel("Auto-dismiss pop-up after"))
+        h_layout.addStretch(1)
+        h_layout.addWidget(spin)
+        return row
+
     @Slot(AlarmSettings)
     def _sync_from_store(self, settings: AlarmSettings) -> None:
-        """Pull store side changes into every checkbox without re-emitting."""
+        """Pull store side changes into every control without re-emitting."""
         for channel, checkbox in self._checkboxes:
-            desired = channel.getter(settings)
-            if checkbox.isChecked() == desired:
+            target = channel.getter(settings)
+            if checkbox.isChecked() == target:
                 continue
             checkbox.blockSignals(True)
-            checkbox.setChecked(desired)
+            checkbox.setChecked(target)
             checkbox.blockSignals(False)
+
+        popup_timeout_s = settings.popup_timeout_ms // 1_000
+        if self._popup_timeout_spin.value() != popup_timeout_s:
+            self._popup_timeout_spin.blockSignals(True)
+            self._popup_timeout_spin.setValue(popup_timeout_s)
+            self._popup_timeout_spin.blockSignals(False)

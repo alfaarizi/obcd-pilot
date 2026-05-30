@@ -299,7 +299,11 @@ class Preview(QWidget):
         )
         obcd_thread = QThread(self)
         obcd_worker.moveToThread(obcd_thread)
-        obcd_worker.sig_detection.connect(self.sig_detection)
+        # Hop the worker-thread emission onto the GUI thread
+        # before fanning out to widget slots
+        obcd_worker.sig_detection.connect(
+            self.sig_detection, Qt.ConnectionType.QueuedConnection
+        )
         obcd_worker.sig_detection.connect(app_log.log_detection)
         obcd_worker.sig_model_ready.connect(self.sig_model_ready)
         obcd_thread.started.connect(obcd_worker.start_model)

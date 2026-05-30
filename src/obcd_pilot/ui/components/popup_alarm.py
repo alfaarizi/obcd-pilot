@@ -99,13 +99,14 @@ class PopupAlarm(QWidget):
         Restarts the dismiss timer on every call so rapid detections replace
         the current toast instead of stacking.
         """
-        if not self._store.settings.popup_enabled or not detection.change_detected:
+        settings = self._store.settings
+        if not settings.popup_enabled or not detection.change_detected:
             return
         self._time_label.setText(_format_time(detection.timestamp_ms))
         self._meta_label.setText(_format_meta(detection))
         self._fit_to_parent()
         self._present()
-        self._dismiss_timer.start(alarm.POPUP_TIMEOUT_MS)
+        self._dismiss_timer.start(settings.popup_timeout_ms)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Overloaded Qt method.
@@ -119,14 +120,17 @@ class PopupAlarm(QWidget):
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Overloaded Qt method.
 
-        Reanchor on parent resize unless an animation is currently in flight.
+        Reanchor on parent resize. When an animation is in flight we re-target
+        the slide's x end value instead so a resize mid-present or mid-dismiss
+        still converges on the new horizontal center.
         """
-        if (
-            watched is self._parent
-            and event.type() == QEvent.Type.Resize
-            and self._animation.state() == QAbstractAnimation.State.Stopped
-        ):
-            self.move(self._target_pos())
+        if watched is self._parent and event.type() == QEvent.Type.Resize:
+            target = self._target_pos()
+            if self._animation.state() == QAbstractAnimation.State.Stopped:
+                self.move(target)
+            else:
+                end = self._slide.endValue()
+                self._slide.setEndValue(QPoint(target.x(), end.y()))
         return super().eventFilter(watched, event)
 
     def _present(self) -> None:
