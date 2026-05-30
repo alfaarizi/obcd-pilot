@@ -45,3 +45,27 @@ def test_store_change_syncs_into_view(view: AlarmsView) -> None:
     _, checkbox = view._checkboxes[0]
     alarm.store().set_popup_enabled(False)
     assert checkbox.isChecked() is False
+
+
+def test_popup_timeout_spin_reflects_persisted_state(qtbot: QtBot) -> None:
+    """The spin box opens at the value previously written to QSettings."""
+    alarm.store().set_popup_timeout_ms(9_000)
+    view = AlarmsView()
+    qtbot.addWidget(view)
+    assert view._popup_timeout_spin.value() == 9
+
+
+def test_popup_timeout_spin_writes_through_to_store(
+    view: AlarmsView, qtbot: QtBot
+) -> None:
+    """Changing the spin box value persists the new timeout in milliseconds."""
+    store = alarm.store()
+    with qtbot.waitSignal(store.sig_changed, timeout=500):
+        view._popup_timeout_spin.setValue(12)
+    assert store.settings.popup_timeout_ms == 12_000
+
+
+def test_store_timeout_change_syncs_into_spin(view: AlarmsView) -> None:
+    """A store side timeout change propagates back into the spin box."""
+    alarm.store().set_popup_timeout_ms(7_000)
+    assert view._popup_timeout_spin.value() == 7

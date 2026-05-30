@@ -3,7 +3,8 @@
 from collections.abc import Callable
 
 import pytest
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
@@ -100,3 +101,23 @@ def test_anchors_to_horizontal_center_of_parent(
     popup.show_alert(make_detection(change_detected=True))
     expected_x = (parent.width() - popup.width()) // 2
     assert popup.x() == max(0, expected_x)
+
+
+def test_resize_mid_animation_retargets_slide_end(
+    parent: QWidget,
+    popup: PopupAlarm,
+    make_detection: Callable[..., Detection],
+) -> None:
+    """A parent resize during the slide animation retargets its x end value."""
+    popup.show_alert(make_detection(change_detected=True))
+    original_end_y = popup._slide.endValue().y()
+
+    old_size = parent.size()
+    new_size = QSize(960, 540)
+    parent.resize(new_size)
+    popup.eventFilter(parent, QResizeEvent(new_size, old_size))
+
+    expected_x = max(0, (parent.width() - popup.width()) // 2)
+    end = popup._slide.endValue()
+    assert end.x() == expected_x
+    assert end.y() == original_end_y

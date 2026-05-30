@@ -17,9 +17,9 @@ class TestDefaults:
         """alarm.store() returns the same store across calls."""
         assert alarm.store() is alarm.store()
 
-    def test_popup_timeout_constant(self) -> None:
-        """The default pop-up timeout is 5 seconds."""
-        assert alarm.POPUP_TIMEOUT_MS == 5_000
+    def test_default_popup_timeout_is_three_seconds(self) -> None:
+        """The default pop-up auto-dismiss timeout is 3 seconds."""
+        assert AlarmSettings().popup_timeout_ms == 3_000
 
 
 class TestMutations:
@@ -35,6 +35,16 @@ class TestMutations:
         assert snapshot.popup_enabled is False
         assert store.settings.popup_enabled is False
 
+    def test_set_popup_timeout_ms_updates_and_emits(self, qtbot: QtBot) -> None:
+        """set_popup_timeout_ms writes the new value and emits the snapshot."""
+        store = AlarmSettingsStore()
+        with qtbot.waitSignal(store.sig_changed, timeout=500) as blocker:
+            store.set_popup_timeout_ms(8_000)
+        snapshot = blocker.args[0]
+        assert isinstance(snapshot, AlarmSettings)
+        assert snapshot.popup_timeout_ms == 8_000
+        assert store.settings.popup_timeout_ms == 8_000
+
     def test_setter_is_noop_when_value_unchanged(self, qtbot: QtBot) -> None:
         """Setting the same value does not reemit sig_changed."""
         store = AlarmSettingsStore()
@@ -45,8 +55,14 @@ class TestMutations:
 class TestPersistence:
     """Changes survive store reconstruction by way of QSettings."""
 
-    def test_changes_persist_across_stores(self) -> None:
-        """A second store reads back the value the first one wrote."""
+    def test_popup_enabled_persists_across_stores(self) -> None:
+        """A second store reads back the toggle the first one wrote."""
         first = AlarmSettingsStore()
         first.set_popup_enabled(False)
         assert AlarmSettingsStore().settings.popup_enabled is False
+
+    def test_popup_timeout_persists_across_stores(self) -> None:
+        """A second store reads back the timeout the first one wrote."""
+        first = AlarmSettingsStore()
+        first.set_popup_timeout_ms(12_000)
+        assert AlarmSettingsStore().settings.popup_timeout_ms == 12_000
