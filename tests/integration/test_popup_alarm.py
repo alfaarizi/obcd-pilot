@@ -88,7 +88,7 @@ def test_left_click_dismisses(
 ) -> None:
     """A left click on the toast triggers the dismiss animation and hides it."""
     popup.show_alert(make_detection(change_detected=True))
-    qtbot.mouseClick(popup, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(popup, Qt.MouseButton.LeftButton)  # type: ignore[no-untyped-call]
     qtbot.waitUntil(lambda: popup.isHidden(), timeout=1000)
 
 
