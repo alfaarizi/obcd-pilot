@@ -48,7 +48,7 @@ class PopupAlarm(QWidget):
         self.setObjectName("popup-alarm")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        self._parent = parent
+        self._host = parent
         self._store = alarm.store()
 
         self._dismiss_timer = QTimer(self)
@@ -124,7 +124,7 @@ class PopupAlarm(QWidget):
         the slide's x end value instead so a resize mid-present or mid-dismiss
         still converges on the new horizontal center.
         """
-        if watched is self._parent and event.type() == QEvent.Type.Resize:
+        if watched is self._host and event.type() == QEvent.Type.Resize:
             target = self._target_pos()
             if self._animation.state() == QAbstractAnimation.State.Stopped:
                 self.move(target)
@@ -191,14 +191,14 @@ class PopupAlarm(QWidget):
             self._is_dismissing = False
 
     def _fit_to_parent(self) -> None:
-        """Resize to fit the parent's current width within sane bounds."""
-        available = self._parent.width() - 2 * _SIDE_MARGIN
+        """Resize to fit the host's current width within sane bounds."""
+        available = self._host.width() - 2 * _SIDE_MARGIN
         self.setFixedWidth(max(_MIN_WIDTH, min(_MAX_WIDTH, available)))
         self.adjustSize()
 
     def _target_pos(self) -> QPoint:
-        """Return the top center anchor point inside the parent preview."""
-        x = max(0, (self._parent.width() - self.width()) // 2)
+        """Return the top center anchor point inside the host widget."""
+        x = max(0, (self._host.width() - self.width()) // 2)
         return QPoint(x, _TOP_MARGIN)
 
 

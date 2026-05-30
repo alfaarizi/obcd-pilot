@@ -94,7 +94,7 @@ def store() -> AlarmSettingsStore:
 def reset() -> None:
     """Clear persisted alarm settings and drop the store."""
     global _store
-    qsettings = _store._qsettings if _store is not None else QSettings()
+    qsettings = QSettings()
     qsettings.remove(_KEY_GROUP)
     qsettings.sync()
     _store = None
