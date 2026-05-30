@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from obcd_pilot import alarm
 from obcd_pilot.pipeline import Detection
 
 
@@ -13,6 +14,14 @@ from obcd_pilot.pipeline import Detection
 def qapp_args() -> list[str]:
     """Override pytest-qt default args to suppress platform warnings."""
     return [sys.argv[0]]
+
+
+@pytest.fixture(autouse=True)
+def _isolated_alarm_settings() -> Iterator[None]:
+    """Reset persisted alarm settings and the cached store around every test."""
+    alarm.settings.reset()
+    yield
+    alarm.settings.reset()
 
 
 @pytest.fixture()

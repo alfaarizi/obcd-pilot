@@ -261,7 +261,7 @@ class TestPreviewStaticFactoryMethods:
         assert len(buttons) == 2
 
     def test_camera_button_has_popup_menu(self, preview: Preview) -> None:
-        """The camera button is configured for popup-menu mode."""
+        """The camera button is configured for pop-up menu mode."""
         from PySide6.QtWidgets import QToolButton
 
         assert (
