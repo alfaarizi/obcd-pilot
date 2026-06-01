@@ -1,20 +1,13 @@
 """OBCD Pilot application entry point."""
 
 import sys
-from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication, QSplashScreen, QWidget
 
 from obcd_pilot import __version__
-
-
-def _resource_path(rel: str) -> Path:
-    """Resolve a bundled-asset path. Works in dev and frozen PyInstaller builds."""
-    if getattr(sys, "frozen", False):
-        return Path(sys._MEIPASS) / rel  # type: ignore[attr-defined]
-    return Path(__file__).resolve().parent / rel
+from obcd_pilot.resources import resource_path
 
 
 def main() -> None:
@@ -38,7 +31,7 @@ def main() -> None:
     def _finish_init() -> None:
         nonlocal window
         app.setStyleSheet(
-            _resource_path("ui/styles/app.qss").read_text(encoding="utf-8")
+            resource_path("ui/styles/app.qss").read_text(encoding="utf-8")
         )
 
         from obcd_pilot import app_log
@@ -59,7 +52,7 @@ def main() -> None:
 
 def _create_splash(subtitle: str) -> QSplashScreen:
     """Qt splash. Loads the @2x asset with DPR=2 for crisp rendering on any display."""
-    pixmap = QPixmap(str(_resource_path("ui/splash@2x.png")))
+    pixmap = QPixmap(str(resource_path("ui/splash@2x.png")))
     pixmap.setDevicePixelRatio(2.0)
     splash = QSplashScreen(pixmap)
     splash.showMessage(
