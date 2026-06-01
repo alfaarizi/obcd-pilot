@@ -10,6 +10,7 @@ a = Analysis(
     datas=[
         ('src/obcd_pilot/ui/styles/app.qss', 'ui/styles'),
         ('src/obcd_pilot/ui/splash@2x.png', 'ui'),
+        ('src/obcd_pilot/ui/sounds', 'ui/sounds'),
     ],
     hiddenimports=[],
     hookspath=[],
