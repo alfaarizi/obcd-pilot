@@ -150,6 +150,23 @@ def test_settings_change_reloads_source(
     assert sound_alarm._effect.source() == QUrl.fromLocalFile(str(custom))
 
 
+def test_popup_only_settings_change_does_not_reload_source(
+    sound_alarm: SoundAlarm, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pop-up channel changes do not trigger sound source re-resolution."""
+    calls = 0
+
+    def spy(_: object) -> None:
+        nonlocal calls
+        calls += 1
+
+    monkeypatch.setattr(sound_alarm, "_reload_source", spy)
+    store = alarm.store()
+    store.set_popup_timeout_s(store.settings.popup_timeout_s + 1)
+    store.set_popup_enabled(not store.settings.popup_enabled)
+    assert calls == 0
+
+
 def test_source_loads_to_ready_status(sound_alarm: SoundAlarm, qtbot: QtBot) -> None:
     """The bundled preset reaches Ready quickly enough for sub-500 ms playback."""
     qtbot.waitUntil(
