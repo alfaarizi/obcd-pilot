@@ -72,8 +72,9 @@ def _resolve_source(settings: AlarmSettings) -> Path:
         if custom.is_file():
             return custom
         logger.warning(
-            "Alarm sound file not found, falling back to default: %s",
+            "Alarm sound file %s not found, falling back to preset %r",
             settings.sound_path,
+            settings.sound_preset,
         )
     return _preset_path(settings.sound_preset)
 
