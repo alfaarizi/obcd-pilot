@@ -30,6 +30,7 @@ class SoundAlarm(QObject):
         self._effect = QSoundEffect(self)
         self._store = alarm.store()
         self._current_source: Path | None = None
+        self._warned_missing_path: str | None = None
         self._reload_source(self._store.settings)
         self._store.sig_changed.connect(self._on_settings_changed)
 
@@ -54,29 +55,32 @@ class SoundAlarm(QObject):
 
     def _reload_source(self, settings: AlarmSettings) -> None:
         """Point the effect at the configured source if it has changed."""
-        source = _resolve_source(settings)
+        source = self._resolve_source(settings)
         if source == self._current_source:
             return
         self._current_source = source
         self._effect.setSource(QUrl.fromLocalFile(str(source)))
 
+    def _resolve_source(self, settings: AlarmSettings) -> Path:
+        """Pick the user supplied file if present, else the configured preset.
 
-def _resolve_source(settings: AlarmSettings) -> Path:
-    """Pick the user supplied file if present, else the configured preset.
-
-    Logs a warning and falls back to the configured preset when a custom file
-    is set but cannot be read.
-    """
-    if settings.sound_path:
+        Falls back to the shipped default preset when a custom file is set but
+        cannot be read, logging once per missing path to avoid flooding the log
+        from rapid play_alert invocations.
+        """
+        if not settings.sound_path:
+            return _preset_path(settings.sound_preset)
         custom = Path(settings.sound_path)
         if custom.is_file():
+            self._warned_missing_path = None
             return custom
-        logger.warning(
-            "Alarm sound file %s not found, falling back to preset %r",
-            settings.sound_path,
-            settings.sound_preset,
-        )
-    return _preset_path(settings.sound_preset)
+        if self._warned_missing_path != settings.sound_path:
+            self._warned_missing_path = settings.sound_path
+            logger.warning(
+                "Alarm sound file %s not found, falling back to default",
+                settings.sound_path,
+            )
+        return _preset_path(SOUND_DEFAULT_PRESET)
 
 
 def _preset_path(name: str) -> Path:

@@ -9,6 +9,7 @@ from PySide6.QtMultimedia import QSoundEffect
 from pytestqt.qtbot import QtBot
 
 from obcd_pilot import alarm
+from obcd_pilot.alarm.settings import SOUND_DEFAULT_PRESET, SOUND_PRESETS
 from obcd_pilot.pipeline import Detection
 from obcd_pilot.ui.components import sound_alarm as sound_alarm_module
 from obcd_pilot.ui.components.sound_alarm import SoundAlarm
@@ -92,7 +93,7 @@ def test_custom_path_overrides_default_source(qtbot: QtBot, tmp_path: Path) -> N
 def test_missing_custom_path_falls_back_and_warns(
     qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A missing custom file falls back to the bundled default and logs."""
+    """A missing custom file falls back to the shipped default preset and logs."""
     warnings: list[str] = []
     monkeypatch.setattr(
         sound_alarm_module.logger,
@@ -102,8 +103,41 @@ def test_missing_custom_path_falls_back_and_warns(
     alarm.store().set_sound_path("/does/not/exist.wav")
     sound_alarm = SoundAlarm()
     source_path = Path(sound_alarm._effect.source().toLocalFile())
-    assert source_path.is_file()
+    assert source_path.name == f"{SOUND_DEFAULT_PRESET}.wav"
     assert any("/does/not/exist.wav" in entry for entry in warnings)
+
+
+def test_missing_path_warns_only_once_per_value(
+    qtbot: QtBot,
+    make_detection: Callable[..., Detection],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Repeated play_alert calls do not re-log the same missing path."""
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        sound_alarm_module.logger,
+        "warning",
+        lambda msg, *args: warnings.append(msg % args),
+    )
+    alarm.store().set_sound_path("/does/not/exist.wav")
+    sound_alarm = SoundAlarm()
+    for _ in range(5):
+        sound_alarm.play_alert(make_detection(change_detected=True))
+    assert len(warnings) == 1
+
+
+def test_missing_path_falls_back_to_shipped_default_not_selected_preset(
+    qtbot: QtBot, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fallback ignores the selected preset and uses the shipped default."""
+    monkeypatch.setattr(sound_alarm_module.logger, "warning", lambda *_: None)
+    non_default = next(p for p in SOUND_PRESETS if p != SOUND_DEFAULT_PRESET)
+    store = alarm.store()
+    store.set_sound_preset(non_default)
+    store.set_sound_path("/does/not/exist.wav")
+    sound_alarm = SoundAlarm()
+    source_path = Path(sound_alarm._effect.source().toLocalFile())
+    assert source_path.name == f"{SOUND_DEFAULT_PRESET}.wav"
 
 
 def test_settings_change_reloads_source(
