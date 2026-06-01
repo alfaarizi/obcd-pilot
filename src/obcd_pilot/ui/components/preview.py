@@ -55,6 +55,7 @@ from obcd_pilot.pipeline import Detection, ModelVariant, OBCDWorker
 from obcd_pilot.ui import icons_rc  # noqa: F401
 from obcd_pilot.ui.components.playback_overlay import PlaybackOverlay
 from obcd_pilot.ui.components.popup_alarm import PopupAlarm
+from obcd_pilot.ui.components.sound_alarm import SoundAlarm
 
 _ICON_VIDEO_ON = QIcon(":/icons/video.svg")
 _ICON_VIDEO_OFF = QIcon(":/icons/video-off.svg")
@@ -116,6 +117,7 @@ class Preview(QWidget):
         self._change_overlay = _ChangeOverlay(self._canvas)
         self._playback_overlay = PlaybackOverlay()
         self._popup_alarm = PopupAlarm(self)
+        self._sound_alarm = SoundAlarm(self)
 
         self._camera_menu = QMenu(self)
         self._camera_group = QActionGroup(self)
@@ -152,6 +154,7 @@ class Preview(QWidget):
         # Signals
         self.sig_detection.connect(self._change_overlay.on_detection)
         self.sig_detection.connect(self._popup_alarm.show_alert)
+        self.sig_detection.connect(self._sound_alarm.play_alert)
         self.sig_pipeline_reset.connect(
             self._change_overlay.clear, Qt.ConnectionType.QueuedConnection
         )
